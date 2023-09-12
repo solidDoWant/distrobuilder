@@ -1,0 +1,21 @@
+General build process:
+1. Build Glibc with kernel headers for target
+2. 
+
+
+
+
+1. Compile cross compiler (clang) so that the compiler used for binaries on the target system is the correct version
+cmake -G Ninja -DLLVM_HOST_TRIPLE=x86_64-pc-linux-gnu -DCMAKE_C_COMPILER_TARGET='x86_64-pc-linux-gnu' -DCMAKE_CXX_COMPILER_TARGET='x86_64-pc-linux-gnu' -DCMAKE_C_COMPILER="clang" -DCMAKE_CXX_COMPILER="clang++" -DCMAKE_BUILD_TYPE=Release -C ../clang/cmake/caches/DistributionExample.cmake ../llvm
+2. Setup linux headers and mpfr
+3. Cross compile libc using clang from (1)
+4. Cross compile clang for the target system using clang from (1) using libc from (3)
+
+
+
+1. Compile cross compiler (clang) so that the compiler used for binaries on the target system is the correct version
+cmake -G Ninja -DLLVM_HOST_TRIPLE=x86_64-pc-linux-gnu -DCMAKE_C_COMPILER_TARGET='x86_64-pc-linux-gnu' -DCMAKE_CXX_COMPILER_TARGET='x86_64-pc-linux-gnu' -DCMAKE_C_COMPILER="clang" -DCMAKE_CXX_COMPILER="clang++" -DCMAKE_BUILD_TYPE=Release -C ../clang/cmake/caches/DistributionExample.cmake ../llvm
+cmake -G Ninja -DLLVM_HOST_TRIPLE=x86_64-pc-linux-gnu -DCMAKE_C_COMPILER_TARGET=x86_64-pc-linux-musl -DCMAKE_CXX_COMPILER_TARGET=x86_64-pc-linux-musl -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS=clang;clang-tools-extra;lld -DLLVM_ENABLE_RUNTIMES=compiler-rt;libcxx;libcxxabi -DCMAKE_INSTALL_PREFIX=/tmp/2913ec20-9bed-45ac-85b2-4bf4e35fc282 /tmp/3fd76e57-dd6e-48f5-be83-84a4b7871f82/llvm
+2. Build musl libc and install to new sysroot
+3. Build kernel headers and place in new sysroot
+4. 

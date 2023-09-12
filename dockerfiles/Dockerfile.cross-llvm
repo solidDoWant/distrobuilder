@@ -1,0 +1,10 @@
+FROM ubuntu:22.04 as production
+
+COPY "assets/cross-llvm" "/assets"
+RUN chmod +x /assets/* && /assets/setup.sh && rm -r /assets
+
+# Include dev packages like Go
+FROM golang:1.21-bookworm as development
+
+COPY "assets/cross-llvm" "/assets"
+RUN chmod +x /assets/* && /assets/setup.sh && /assets/setup-dev.sh && rm -r /assets

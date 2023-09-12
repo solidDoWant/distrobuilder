@@ -1,0 +1,73 @@
+SYSROOT=/rootfs
+
+cmake -G Ninja \
+    -DLLVM_TARGETS_TO_BUILD=X86 \
+    -DLLVM_HOST_TRIPLE=x86_64-pc-linux-gnu \
+    -DCMAKE_C_COMPILER_TARGET='x86_64-pc-linux-gnu' \
+    -DCMAKE_C_COMPILER="clang" \
+    -DCMAKE_CXX_COMPILER_TARGET='x86_64-pc-linux-gnu' \
+    -DCMAKE_CXX_COMPILER="clang++" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_ENABLE_PROJECTS="clang;libc;lld;lldb;openmp;polly" \
+    -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
+    -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON \
+    -DCOMPILER_RT_BUILD_GWP_ASAN=OFF \
+    -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF \
+    -DCLANG_DEFAULT_LINKER=lld \
+    -DCLANG_DEFAULT_RTLIB=compiler-rt \
+    -DDEFAULT_SYSROOT=$SYSROOT \
+    -DCMAKE_INSTALL_PREFIX=$SYSROOT \
+    -DLLVM_INSTALL_BINUTILS_SYMLINKS=ON \
+    -DLLVM_INSTALL_CCTOOLS_SYMLINKS=ON \
+    -DLLVM_LIBC_FULL_BUILD=ON  \
+    -DLLVM_PARALLEL_LINK_JOBS=3 \
+    -C ../clang/cmake/caches/DistributionExample.cmake \
+    ../llvm
+
+ninja libc-hdrgen
+cp bin/libc-hdrgen /tmp/
+
+cmake -G Ninja \
+    -DLLVM_TARGETS_TO_BUILD=X86 \
+    -DLLVM_HOST_TRIPLE=x86_64-pc-linux-gnu \
+    -DCMAKE_C_COMPILER_TARGET='x86_64-pc-linux-gnu' \
+    -DCMAKE_C_COMPILER="clang" \
+    -DCMAKE_CXX_COMPILER_TARGET='x86_64-pc-linux-gnu' \
+    -DCMAKE_CXX_COMPILER="clang++" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_ENABLE_PROJECTS="clang;lld;lldb;openmp;polly" \
+    -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt;libcxx;libcxxabi;libunwind" \
+    -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON \
+    -DCOMPILER_RT_BUILD_GWP_ASAN=OFF \
+    -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF \
+    -DCLANG_DEFAULT_LINKER=lld \
+    -DCLANG_DEFAULT_RTLIB=compiler-rt \
+    -DDEFAULT_SYSROOT=$SYSROOT \
+    -DCMAKE_INSTALL_PREFIX=$SYSROOT \
+    -DLLVM_INSTALL_BINUTILS_SYMLINKS=ON \
+    -DLLVM_INSTALL_CCTOOLS_SYMLINKS=ON \
+    -DLLVM_LIBC_FULL_BUILD=ON  \
+    -DLLVM_RUNTIME_TARGETS='x86_64-pc-linux-gnu' \
+    -DLLVM_PARALLEL_LINK_JOBS=3 \
+    ../llvm
+
+    -C ../clang/cmake/caches/DistributionExample.cmake \
+
+    # -DLLVM_ENABLE_LTO=ON \
+
+
+cmake -G Ninja \
+    -DLLVM_TARGETS_TO_BUILD=X86 \
+    -DLLVM_HOST_TRIPLE=x86_64-pc-linux-gnu \
+    -DCMAKE_C_COMPILER_TARGET='x86_64-pc-linux-gnu' \
+    -DCMAKE_C_COMPILER="clang" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_ENABLE_PROJECTS="clang;lld" \
+    -DLLVM_ENABLE_RUNTIMES="libc" \
+    -DDEFAULT_SYSROOT=$SYSROOT \
+    -DCMAKE_INSTALL_PREFIX=$SYSROOT \
+    -DLLVM_LIBC_FULL_BUILD=ON  \
+    -DLLVM_RUNTIME_TARGETS='x86_64-pc-linux-gnu' \
+    -DLLVM_PARALLEL_LINK_JOBS=3 \
+    -C ../clang/cmake/caches/DistributionExample.cmake \
+    ../llvm
