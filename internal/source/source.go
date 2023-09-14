@@ -2,30 +2,33 @@ package source
 
 import (
 	"os"
+	"path"
 
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/utils"
 )
 
 type Source struct {
-	DownloadPath          string // Directory to download the source to, relative to the current working directory
-	shouldDeleteOnCleanup bool
+	DownloadRootDir       string
+	DownloadPath          string // Directory to download the source to, relative to the current working directory or download root directory if set
+	ShouldDeleteOnCleanup bool
 }
 
-func NewSource(downloadPath string) *Source {
-	if downloadPath == "" {
-		downloadPath = utils.GetTempDirectoryPath()
+func NewSource(downloadRootDir string) *Source {
+	shouldDeleteOnCleanup := false
+	if downloadRootDir == "" {
+		downloadRootDir = utils.GetTempDirectoryPath()
+		shouldDeleteOnCleanup = true // Cleanup when a temp directory is created
 	}
 
 	return &Source{
-		DownloadPath:          downloadPath,
-		shouldDeleteOnCleanup: false, // False by default, will be set to true if the download path is determined to not exist yet
+		DownloadRootDir:       downloadRootDir,
+		ShouldDeleteOnCleanup: shouldDeleteOnCleanup,
 	}
 }
 
 func (s *Source) Setup() error {
-	didPathAlreadyExist, err := utils.EnsureDirectoryExists(s.DownloadPath)
-	s.shouldDeleteOnCleanup = !didPathAlreadyExist
+	_, err := utils.EnsureDirectoryExists(s.FullDownloadPath())
 	if err != nil {
 		return trace.Wrap(err, "failed to ensure download directory exists with correct permissions and ownership")
 	}
@@ -34,14 +37,19 @@ func (s *Source) Setup() error {
 }
 
 func (s *Source) Cleanup() error {
-	if !s.shouldDeleteOnCleanup {
+	if !s.ShouldDeleteOnCleanup {
 		return nil
 	}
 
-	err := os.RemoveAll(s.DownloadPath)
+	fullDownloadPath := s.FullDownloadPath()
+	err := os.RemoveAll(fullDownloadPath)
 	if err != nil {
-		return trace.Wrap(err, "failed to delete download directory %q", s.DownloadPath)
+		return trace.Wrap(err, "failed to delete download directory %q", fullDownloadPath)
 	}
 
 	return nil
+}
+
+func (s *Source) FullDownloadPath() string {
+	return path.Join(s.DownloadRootDir, s.DownloadPath)
 }

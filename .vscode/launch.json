@@ -13,7 +13,10 @@
             "args": [
                 "build",
                 "cross-llvm",
-                // "-c"
+                "--source-directory-path",
+                "/tmp/source/llvm",
+                "--output-directory-path",
+                "/tmp/output/llvm"
             ],
         },
         {

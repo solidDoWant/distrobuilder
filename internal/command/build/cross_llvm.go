@@ -19,9 +19,12 @@ const (
 	targetTripletFlagName string = "target-triplet"
 )
 
-type CrossLLVMCommand struct{}
+type CrossLLVMCommand struct {
+	SourceDirectoryPath string
+	OutputDirectoryPath string
+}
 
-func (clc CrossLLVMCommand) GetCommand() *cli.Command {
+func (clc *CrossLLVMCommand) GetCommand() *cli.Command {
 	return &cli.Command{
 		Name: "cross-llvm",
 		Flags: []cli.Flag{
@@ -56,7 +59,7 @@ func (clc CrossLLVMCommand) GetCommand() *cli.Command {
 			}
 
 			ctx := context.Background() // TODO verify that this is the proper context for this use case
-			_, err = builder.Build(ctx)
+			err = builder.Build(ctx)
 			if err != nil {
 				return trace.Wrap(err, "failed to build cross LLVM")
 			}
@@ -81,7 +84,11 @@ func (clc *CrossLLVMCommand) GetBuilder(cliCtx *cli.Context) (*build.CrossLLVM, 
 		return nil, trace.Wrap(err, "failed to parse target triplet")
 	}
 
-	return build.NewCrossLLVM(cliCtx.String(gitRefFlagName), targetTriplet), nil
+	builder := build.NewCrossLLVM(cliCtx.String(gitRefFlagName), targetTriplet)
+	builder.SourceDirectoryPath = clc.SourceDirectoryPath
+	builder.OutputDirectoryPath = clc.OutputDirectoryPath
+
+	return builder, nil
 }
 
 func (clc *CrossLLVMCommand) getTripletMachineValue() string {
@@ -93,4 +100,12 @@ func (clc *CrossLLVMCommand) getTripletMachineValue() string {
 	default:
 		return runtime.GOARCH
 	}
+}
+
+func (clc *CrossLLVMCommand) SetSourcePath(sourceDirectoryPath string) {
+	clc.SourceDirectoryPath = sourceDirectoryPath
+}
+
+func (clc *CrossLLVMCommand) SetOutputDirectoryPath(outputDirectoryPath string) {
+	clc.OutputDirectoryPath = outputDirectoryPath
 }

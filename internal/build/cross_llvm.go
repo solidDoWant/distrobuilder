@@ -15,14 +15,16 @@ import (
 )
 
 type CrossLLVM struct {
+	SourceBuilder
+	FilesystemOutputBuilder
 	GitRef       string
 	TargetTriple *utils.Triplet
 	Vendor       string
 
 	// Vars for validation checking
 	hasBuildCompleted bool
-	buildOutputPath   string
-	builtVersion      string
+	// buildOutputPath   string
+	builtVersion string
 }
 
 func NewCrossLLVM(gitRef string, targetTriplet *utils.Triplet) *CrossLLVM {
@@ -38,14 +40,15 @@ func NewCrossLLVM(gitRef string, targetTriplet *utils.Triplet) *CrossLLVM {
 }
 
 // Build implements Builder.
-func (cb *CrossLLVM) Build(ctx context.Context) (string, error) {
+func (cb *CrossLLVM) Build(ctx context.Context) error {
 	slog.Info("Beginning LLVM clang cross-compiler build")
 
-	source := source.NewGitRepo("", "https://github.com/llvm/llvm-project", cb.GitRef)
-	slog.Info("Cloning git repo", "repo", source.PrettyName(), "download_path", source.DownloadPath)
+	source := source.NewGitRepo(cb.SourceDirectoryPath, "https://github.com/llvm/llvm-project", cb.GitRef)
+	sourceDirectory := source.FullDownloadPath()
+	slog.Info("Cloning git repo", "repo", source.PrettyName(), "download_path", sourceDirectory)
 	err := source.Download(ctx)
 	if err != nil {
-		return "", trace.Wrap(err, "failed to clone LLVM from %q", source.PrettyName())
+		return trace.Wrap(err, "failed to clone LLVM from %q", source.PrettyName())
 	}
 	defer func() {
 		cleanupErr := source.Cleanup()
@@ -57,7 +60,7 @@ func (cb *CrossLLVM) Build(ctx context.Context) (string, error) {
 	slog.Info("Creating build and output directories")
 	buildDirectory, err := utils.EnsureTempDirectoryExists()
 	if err != nil {
-		return "", trace.Wrap(err, "failed to create build directory at %q", buildDirectory)
+		return trace.Wrap(err, "failed to create build directory at %q", buildDirectory)
 	}
 	defer func() {
 		cleanupErr := os.RemoveAll(buildDirectory)
@@ -65,41 +68,44 @@ func (cb *CrossLLVM) Build(ctx context.Context) (string, error) {
 			err = trace.Wrap(err, "failed to remove build directory")
 		}
 	}()
-	outputDirectory, err := utils.EnsureTempDirectoryExists()
-	if err != nil {
-		return "", trace.Wrap(err, "failed to create output directory at %q", outputDirectory)
+
+	if cb.OutputDirectoryPath == "" {
+		cb.OutputDirectoryPath = utils.GetTempDirectoryPath()
 	}
-	slog.Debug("Created build and output directories", "build_directory", buildDirectory, "output_directory", outputDirectory)
+	_, err = utils.EnsureDirectoryExists(cb.OutputDirectoryPath)
+	if err != nil {
+		return trace.Wrap(err, "failed to create output directory at %q", cb.OutputDirectoryPath)
+	}
+	slog.Debug("Created build and output directories", "build_directory", buildDirectory, "output_directory", cb.OutputDirectoryPath)
 
 	slog.Info("Running CMake to generate Ninja build file")
-	err = cb.runCMake(source.DownloadPath, buildDirectory, outputDirectory)
+	err = cb.runCMake(sourceDirectory, buildDirectory)
 	if err != nil {
-		return "", trace.Wrap(err, "failed to create Ninja build file via CMake")
+		return trace.Wrap(err, "failed to create Ninja build file via CMake")
 	}
 
 	slog.Info("Building and installing LLVM clang with Ninja")
 	err = cb.runNinja(buildDirectory)
 	if err != nil {
-		return "", trace.Wrap(err, "failed to build and install LLVM clang via Ninja")
+		return trace.Wrap(err, "failed to build and install LLVM clang via Ninja")
 	}
 
 	slog.Info("Recording info for validation checking")
 	err = cb.recordVersion(buildDirectory)
 	if err != nil {
-		return "", trace.Wrap(err, "failed to record LLVM source code version")
+		return trace.Wrap(err, "failed to record LLVM source code version")
 	}
 
 	cb.hasBuildCompleted = true
-	cb.buildOutputPath = outputDirectory
 
-	slog.Info("Build complete!", "output_directory", outputDirectory)
-	return outputDirectory, nil
+	slog.Info("Build complete!", "output_directory", cb.OutputDirectoryPath)
+	return nil
 }
 
 func (cb *CrossLLVM) VerifyBuild(ctx context.Context) error {
 	err := (&runners.VersionChecker{
 		CommandRunner: runners.CommandRunner{
-			Command:   path.Join(cb.buildOutputPath, "bin", "clang"),
+			Command:   path.Join(cb.OutputDirectoryPath, "bin", "clang"),
 			Arguments: []string{"--version"},
 		},
 		VersionRegex: fmt.Sprintf("(?m)clang version %s$", runners.SemverRegex),
@@ -128,7 +134,7 @@ func (cb *CrossLLVM) getHostTriplet() (string, error) {
 	return trimmedOutput, nil
 }
 
-func (cb *CrossLLVM) runCMake(sourceDirectory, buildDirectory, outputDirectory string) error {
+func (cb *CrossLLVM) runCMake(sourceDirectory, buildDirectory string) error {
 	hostTriplet, err := cb.getHostTriplet()
 	if err != nil {
 		return trace.Wrap(err, "failed to get target triplet")
@@ -163,7 +169,7 @@ func (cb *CrossLLVM) runCMake(sourceDirectory, buildDirectory, outputDirectory s
 			{Name: "CMAKE_CXX_FLAGS", Value: commonFlags},
 			{Name: "LLVM_ENABLE_PROJECTS", Value: "clang;clang-tools-extra;lld"},
 			{Name: "LLVM_ENABLE_RUNTIMES", Value: "compiler-rt;libcxx;libcxxabi;libunwind"},
-			{Name: "CMAKE_INSTALL_PREFIX", Value: outputDirectory},
+			{Name: "CMAKE_INSTALL_PREFIX", Value: cb.OutputDirectoryPath},
 			{Name: "LLVM_TARGETS_TO_BUILD", Value: "X86"},
 			{Name: "LLVM_APPEND_VC_REV", Value: "ON"},
 			{Name: "LLVM_ENABLE_PIC", Value: "ON"},                // Required by musl
