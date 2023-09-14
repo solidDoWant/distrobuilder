@@ -13,9 +13,11 @@ import (
 
 const clearOwnerFlagName = "clear-owner"
 
-type TarballCommand struct{}
+type TarballCommand struct {
+	OutputFilePath string
+}
 
-func (tc TarballCommand) GetPackageCommand() *cli.Command {
+func (tc *TarballCommand) GetPackageCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "tarball",
 		Usage: "Packages a build into a tarball",
@@ -75,8 +77,14 @@ func (tc *TarballCommand) getCommonFlags() []cli.Flag {
 }
 
 func (tc *TarballCommand) GetArtifactHandler(cliCtx *cli.Context) (*artifacts.Tarball, error) {
-	tarballPackager := artifacts.NewTarball(cliCtx.Path(buildOutputPathFlagName))
+	tarballPackager := &artifacts.Tarball{}
 	tarballPackager.ShouldResetOwner = cliCtx.Bool(clearOwnerFlagName)
+	tarballPackager.SourcePath = cliCtx.Path(buildOutputPathFlagName)
+	tarballPackager.SetOutputFilePath(tc.OutputFilePath)
 
 	return tarballPackager, nil
+}
+
+func (tc *TarballCommand) SetOutputFilePath(outputFilePath string) {
+	tc.OutputFilePath = outputFilePath
 }

@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"path"
@@ -12,19 +13,15 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/google/uuid"
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/utils"
 )
 
 type Tarball struct {
-	BuildOutputPath  string
+	OutputPath       string
+	SourcePath       string
 	ShouldResetOwner bool // True to change owner/group to root/root for packaging, and to set owner/group to the current user/primary group for installing
-}
-
-func NewTarball(buildOutputPath string) *Tarball {
-	return &Tarball{
-		BuildOutputPath: buildOutputPath,
-	}
 }
 
 func (t Tarball) Install(ctx context.Context, options *InstallOptions) error {
@@ -215,12 +212,17 @@ func (t *Tarball) updateOwnerAndPerms(header *tar.Header, outputFilePath string)
 	return nil
 }
 
-func (t Tarball) Package(ctx context.Context) (string, error) {
-	if t.BuildOutputPath == "" {
-		return "", trace.Errorf("the build output path is unset")
+func (t *Tarball) Package(ctx context.Context) (string, error) {
+	if t.OutputPath == "" {
+		t.OutputPath = path.Join(os.TempDir(), fmt.Sprintf("build-%s.tar.gz", uuid.New()))
 	}
 
-	fileHandle, err := os.CreateTemp("", "build-*.tar.gz")
+	_, err := utils.EnsureDirectoryExists(path.Dir(t.OutputPath))
+	if err != nil {
+		return "", trace.Wrap(err, "failed to ensure package ouutput directory exists")
+	}
+
+	fileHandle, err := os.OpenFile(t.OutputPath, os.O_CREATE|os.O_WRONLY, 0644)
 	defer utils.Close(fileHandle, &err)
 	if err != nil {
 		return "", trace.Wrap(err, "failed to create build tarball")
@@ -242,13 +244,13 @@ func (t Tarball) Package(ctx context.Context) (string, error) {
 }
 
 func (t *Tarball) addFilesToArchive(archiveWriter *tar.Writer) error {
-	err := filepath.Walk(t.BuildOutputPath, func(path string, filesystemObjectInfo os.FileInfo, err error) error {
+	err := filepath.Walk(t.SourcePath, func(path string, filesystemObjectInfo os.FileInfo, err error) error {
 		if err != nil {
 			return trace.Wrap(err, "failed to walk dir %q", path)
 		}
 
 		// Skip the root path
-		if path == t.BuildOutputPath {
+		if path == t.SourcePath {
 			return nil
 		}
 
@@ -313,10 +315,10 @@ func (t *Tarball) getTarHeaderForFSObject(objectPath string, filesystemObjectInf
 
 	filesystemObjectHeader, err := tar.FileInfoHeader(filesystemObjectInfo, linkTarget)
 	if err != nil {
-		return nil, trace.Wrap(err, "failed to create tar header for %q", t.BuildOutputPath)
+		return nil, trace.Wrap(err, "failed to create tar header for %q", t.SourcePath)
 	}
 
-	relativePath := strings.TrimPrefix(objectPath, t.BuildOutputPath)
+	relativePath := strings.TrimPrefix(objectPath, t.SourcePath)
 	relativePath = strings.TrimPrefix(relativePath, "/")
 
 	filesystemObjectHeader.Name = relativePath
@@ -344,4 +346,8 @@ func (t *Tarball) getTarHeaderLinkTarget(path string, filesystemObjectInfo os.Fi
 	}
 
 	return linkTarget, nil
+}
+
+func (t *Tarball) SetOutputFilePath(outputFilePath string) {
+	t.OutputPath = outputFilePath
 }

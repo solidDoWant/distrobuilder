@@ -28,9 +28,11 @@
             "args": [
                 "package",
                 "tarball",
-                "-s",
-                "/tmp/cbc764fd-d834-45ee-835b-3773842e33dd",
-                "-c"
+                "-c",
+                "--build-output-path",
+                "/tmp/output/llvm",
+                "--output-file-path",
+                "/tmp/package/llvm.tar.gz"
             ],
         },
         {
@@ -43,7 +45,7 @@
                 "install",
                 "tarball",
                 "-s",
-                "/tmp/build-3630261619.tar.gz",
+                "/tmp/package/llvm.tar.gz",
                 "-D",
                 "/tmp/install-test"
             ],
