@@ -10,7 +10,7 @@ import (
 
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/runners"
-	"github.com/solidDoWant/distrobuilder/internal/source"
+	git_source "github.com/solidDoWant/distrobuilder/internal/source/git"
 	"github.com/solidDoWant/distrobuilder/internal/utils"
 )
 
@@ -27,13 +27,8 @@ type CrossLLVM struct {
 	builtVersion string
 }
 
-func NewCrossLLVM(gitRef string, targetTriplet *utils.Triplet) *CrossLLVM {
-	if gitRef == "" {
-		gitRef = "HEAD"
-	}
-
+func NewCrossLLVM(targetTriplet *utils.Triplet) *CrossLLVM {
 	return &CrossLLVM{
-		GitRef:       gitRef,
 		TargetTriple: targetTriplet,
 		Vendor:       "distrobuilder",
 	}
@@ -43,7 +38,7 @@ func NewCrossLLVM(gitRef string, targetTriplet *utils.Triplet) *CrossLLVM {
 func (cb *CrossLLVM) Build(ctx context.Context) error {
 	slog.Info("Beginning LLVM clang cross-compiler build")
 
-	source := source.NewGitRepo(cb.SourceDirectoryPath, "https://github.com/llvm/llvm-project", cb.GitRef)
+	source := git_source.NewLLVMGitRepo(cb.SourceDirectoryPath, cb.GitRef)
 	sourceDirectory := source.FullDownloadPath()
 	slog.Info("Cloning git repo", "repo", source.PrettyName(), "download_path", sourceDirectory)
 	err := source.Download(ctx)

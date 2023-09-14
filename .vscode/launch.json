@@ -13,10 +13,8 @@
             "args": [
                 "build",
                 "cross-llvm",
-                "--source-directory-path",
-                "/tmp/source/llvm",
                 "--output-directory-path",
-                "/tmp/output/llvm"
+                "/tmp/output/cross-llvm"
             ],
         },
         {
@@ -30,9 +28,9 @@
                 "tarball",
                 "-c",
                 "--build-output-path",
-                "/tmp/output/llvm",
+                "/tmp/output/cross-llvm",
                 "--output-file-path",
-                "/tmp/package/llvm.tar.gz"
+                "/tmp/package/cross-llvm.tar.gz"
             ],
         },
         {
@@ -44,8 +42,9 @@
             "args": [
                 "install",
                 "tarball",
+                "-c",
                 "-s",
-                "/tmp/package/llvm.tar.gz",
+                "/tmp/package/cross-llvm.tar.gz",
                 "-D",
                 "/tmp/install-test"
             ],

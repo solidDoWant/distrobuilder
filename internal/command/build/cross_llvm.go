@@ -84,7 +84,8 @@ func (clc *CrossLLVMCommand) GetBuilder(cliCtx *cli.Context) (*build.CrossLLVM, 
 		return nil, trace.Wrap(err, "failed to parse target triplet")
 	}
 
-	builder := build.NewCrossLLVM(cliCtx.String(gitRefFlagName), targetTriplet)
+	builder := build.NewCrossLLVM(targetTriplet)
+	builder.GitRef = cliCtx.String(gitRefFlagName)
 	builder.SourceDirectoryPath = clc.SourceDirectoryPath
 	builder.OutputDirectoryPath = clc.OutputDirectoryPath
 
