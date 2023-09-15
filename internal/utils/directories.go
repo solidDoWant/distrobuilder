@@ -12,18 +12,37 @@ import (
 	"github.com/gravitational/trace"
 )
 
-func EnsureTempDirectoryExists() (string, error) {
-	directoryPath := GetTempDirectoryPath()
-	didPathAlreadyExist, err := EnsureDirectoryExists(directoryPath)
+type Directory struct {
+	Path string
+}
+
+func NewDirectory(directoryPath string) *Directory {
+	if directoryPath == "" {
+		directoryPath = GetTempDirectoryPath()
+	}
+
+	return &Directory{
+		Path: directoryPath,
+	}
+}
+
+func (d *Directory) Create() error {
+	_, err := EnsureDirectoryExists(d.Path)
+	return trace.Wrap(err, "failed to ensure that directory %q eixts", d.Path)
+}
+
+func (d *Directory) Delete() error {
+	err := os.RemoveAll(d.Path)
 	if err != nil {
-		return directoryPath, trace.Wrap(err, "failed to create temporary directory")
+		return trace.Wrap(err, "failed to remove directory %q", d.Path)
 	}
 
-	if didPathAlreadyExist {
-		return directoryPath, trace.Errorf("temporary path %q already exists", directoryPath)
-	}
+	return nil
+}
 
-	return directoryPath, nil
+// Calling `Close` is OPTIONAL and will delete the directory.
+func (d *Directory) Close() error {
+	return d.Delete()
 }
 
 func GetTempDirectoryPath() string {

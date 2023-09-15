@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"slices"
 
 	"github.com/go-git/go-git/v5"
@@ -19,22 +20,27 @@ const defaultRemoteName string = "origin"
 
 type GitRepo struct {
 	*Source
-	RepoUrl string // Fully qualified Git repo URL, e.g. https://github.com/some-user/some-repo or git://sourceware.org/git/binutils-gdb.git
-	Ref     string // Fully qualified Git reference, e.g. "HEAD" or "refs/heads/master"
+	Name string // Name of the Git repo source
+	Url  string // Fully qualified Git repo URL, e.g. https://github.com/some-user/some-repo or git://sourceware.org/git/binutils-gdb.git
+	Ref  string // Fully qualified Git reference, e.g. "HEAD" or "refs/heads/master"
 }
 
-func NewGitRepo(repoDirectory, repoUrl, ref string) *GitRepo {
+func NewGitRepo(name, url, ref string) *GitRepo {
+	source := NewSource()
+	source.DownloadPath = path.Join("git", name)
+
 	return &GitRepo{
-		Source:  NewSource(repoDirectory),
-		RepoUrl: repoUrl,
-		Ref:     ref,
+		Source: source,
+		Name:   name,
+		Url:    url,
+		Ref:    ref,
 	}
 }
 
 func (gr *GitRepo) Download(ctx context.Context) error {
 	err := gr.Setup()
 	if err != nil {
-		return trace.Wrap(err, "failed to perform source setup for git repo %q", gr.PrettyName())
+		return trace.Wrap(err, "failed to perform source setup for git repo %q", gr.String())
 	}
 
 	downloadDirectoryPath := gr.FullDownloadPath()
@@ -42,21 +48,6 @@ func (gr *GitRepo) Download(ctx context.Context) error {
 	if err != nil {
 		return trace.Wrap(err, "failed to get repo")
 	}
-
-	// // TODO remove
-	// cloneOptions := git.CloneOptions{
-	// 	URL:               gr.RepoUrl,
-	// 	ReferenceName:     plumbing.ReferenceName(gr.Ref),
-	// 	SingleBranch:      true,
-	// 	RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
-	// 	Tags:              git.NoTags,
-	// 	Progress:          os.Stdout, // TODO revert or pipe to logger
-	// 	Depth:             1,
-	// }
-	// _, err = git.PlainCloneContext(ctx, downloadDirectoryPath, false, &cloneOptions)
-	// if err != nil {
-	// 	return trace.Wrap(err, "failed to clone repo %q to %q", gr.PrettyName(), downloadDirectoryPath)
-	// }
 
 	err = gr.cloneInitializedRepo(repo, remoteName)
 	if err != nil {
@@ -116,7 +107,7 @@ func (gr *GitRepo) getExistingRepo(repoPath string) (*git.Repository, string, er
 
 	remoteName, err := gr.getRepoRemoteName(repo)
 	if err != nil {
-		return nil, "", trace.Wrap(err, "failed to get remote with fetch URL of %q for pre-existing repo at %q", gr.RepoUrl, repoPath)
+		return nil, "", trace.Wrap(err, "failed to get remote with fetch URL of %q for pre-existing repo at %q", gr.Url, repoPath)
 	}
 
 	return repo, remoteName, nil
@@ -140,7 +131,7 @@ func (gr *GitRepo) getRepoRemoteName(repo *git.Repository) (string, error) {
 	})
 
 	if !doesRepoContainMatchingRemote {
-		return "", trace.Errorf("found git repo but it doesn't contain a remote with URL %q", gr.RepoUrl)
+		return "", trace.Errorf("found git repo but it doesn't contain a remote with URL %q", gr.Url)
 	}
 
 	return remoteName, nil
@@ -156,7 +147,7 @@ func (gr *GitRepo) getRemoteNameForFetchURL(remote *git.Remote) string {
 	}
 
 	// The fetch URL will always be the first one
-	if remoteURLs[0] != gr.RepoUrl {
+	if remoteURLs[0] != gr.Url {
 		return ""
 	}
 
@@ -175,7 +166,7 @@ func (gr *GitRepo) createNewRepo(repoPath string) (*git.Repository, string, erro
 	}
 
 	// TODO determine if setting the refspec here is beneficial
-	_, err = repo.CreateRemote(&config.RemoteConfig{Name: defaultRemoteName, URLs: []string{gr.RepoUrl}, Fetch: []config.RefSpec{refSpec}})
+	_, err = repo.CreateRemote(&config.RemoteConfig{Name: defaultRemoteName, URLs: []string{gr.Url}, Fetch: []config.RefSpec{refSpec}})
 	if err != nil {
 		return nil, "", trace.Wrap(err, "failed to create remote for repository at %q", repoPath)
 	}
@@ -285,7 +276,7 @@ func (gr *GitRepo) getCommitHashForTagHash(tagHash plumbing.Hash, repo *git.Repo
 	switch err {
 	case plumbing.ErrObjectNotFound:
 		// The tag is a lightweight tag, which does not need to be resolved further
-		return tagObject.Target, nil
+		return tagHash, nil
 	case nil:
 		// Tag is an annotated tag, which has an object separate from the commit
 		commitHash, err := gr.getCommitHashForTagObject(*tagObject, repo)
@@ -336,6 +327,6 @@ func (gr *GitRepo) updateSubmodules(repoWorktree *git.Worktree) error {
 	return nil
 }
 
-func (gr *GitRepo) PrettyName() string {
-	return fmt.Sprintf("%s@%s", gr.RepoUrl, gr.Ref)
+func (gr *GitRepo) String() string {
+	return fmt.Sprintf("%s: %s@%s", gr.Name, gr.Url, gr.Ref)
 }

@@ -73,7 +73,7 @@ func setCommandFlaags(command *cli.Command, builder Builder) {
 	if _, ok := builder.(SourceBuilder); ok {
 		sourceDirectoryPathFlag := &cli.PathFlag{
 			Name:    sourceDirectoryPathFlagName,
-			Usage:   "path that should be used for storing source files",
+			Usage:   "directory path that should be used for storing source files",
 			Aliases: []string{"S"},
 			Value:   "",
 		}

@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	gitRefFlagName        string = "git-ref"
+	muslGitRefFlagName    string = "musl-git-ref"
+	llvmGitRefFlagName    string = "llvm-git-ref"
 	targetTripletFlagName string = "target-triplet"
 )
 
@@ -29,8 +30,14 @@ func (clc *CrossLLVMCommand) GetCommand() *cli.Command {
 		Name: "cross-llvm",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:   gitRefFlagName,
-				Usage:  "the fully qualified Git ref to build from",
+				Name:   muslGitRefFlagName,
+				Usage:  "the fully qualified Git ref to build Musl from",
+				Value:  "refs/tags/v1.2.4",
+				Action: flags.GitRefValidator,
+			},
+			&cli.StringFlag{
+				Name:   llvmGitRefFlagName,
+				Usage:  "the fully qualified Git ref to build LLVM from",
 				Value:  "refs/tags/llvmorg-17.0.0-rc4",
 				Action: flags.GitRefValidator,
 			},
@@ -85,7 +92,8 @@ func (clc *CrossLLVMCommand) GetBuilder(cliCtx *cli.Context) (*build.CrossLLVM, 
 	}
 
 	builder := build.NewCrossLLVM(targetTriplet)
-	builder.GitRef = cliCtx.String(gitRefFlagName)
+	builder.LLVMGitRef = cliCtx.String(llvmGitRefFlagName)
+	builder.MuslGitRef = cliCtx.String(muslGitRefFlagName)
 	builder.SourceDirectoryPath = clc.SourceDirectoryPath
 	builder.OutputDirectoryPath = clc.OutputDirectoryPath
 
