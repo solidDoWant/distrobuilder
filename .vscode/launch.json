@@ -90,6 +90,55 @@
         "-D",
         "/tmp/install/linux-headers"
       ]
+    },
+    {
+      "name": "Launch build musl-libc",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "build",
+        "musl-libc",
+        "--output-directory-path",
+        "/tmp/output/musl-libc",
+        "--toolchain-directory-path",
+        "/tmp/output/llvm/bin",
+        "--linux-header-directory-path",
+        "/tmp/output/linux-headers"
+      ]
+    },
+    {
+      "name": "Launch package musl-libc",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "package",
+        "tarball",
+        "-c",
+        "--build-output-path",
+        "/tmp/output/musl-libc",
+        "--output-file-path",
+        "/tmp/package/musl-libc.tar.gz"
+      ]
+    },
+    {
+      "name": "Launch install musl-libc",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "install",
+        "tarball",
+        "-c",
+        "-s",
+        "/tmp/package/musl-libc.tar.gz",
+        "-D",
+        "/tmp/install/musl-libc"
+      ]
     }
   ]
 }

@@ -11,6 +11,7 @@ import (
 type Configure struct {
 	GenericRunner
 	CCompiler           string
+	CFlags              string
 	CppCompiler         string
 	InstallPath         string
 	SourceDirectoryPath string
@@ -72,6 +73,10 @@ func (c *Configure) buildVariableArgs() []string {
 
 	if c.CCompiler != "" {
 		args = append(args, fmt.Sprintf("CC=%s", c.CCompiler))
+	}
+
+	if c.CFlags != "" {
+		args = append(args, fmt.Sprintf("CFLAGS=%s", c.CFlags))
 	}
 
 	if c.CppCompiler != "" {

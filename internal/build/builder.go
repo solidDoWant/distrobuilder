@@ -3,6 +3,7 @@ package build
 import (
 	"context"
 	"log/slog"
+	"os"
 	"path"
 
 	"github.com/gravitational/trace"
@@ -15,18 +16,6 @@ type Builder interface {
 	Build(context.Context) error
 	VerifyBuild(context.Context) error
 	// RequiredSpace() int	// TODO
-}
-
-type SourceBuilder struct {
-	SourceDirectoryPath string
-}
-
-type FilesystemOutputBuilder struct {
-	OutputDirectoryPath string
-}
-
-type ToolchainRequiredBuilder struct {
-	ToolchainPath string
 }
 
 func (trb *ToolchainRequiredBuilder) GetPathForTool(tool string) string {
@@ -50,15 +39,34 @@ func setupForBuild(ctx context.Context, repo *source.GitRepo, outputDirectoryPat
 		return nil, nil, trace.Wrap(err, "failed to create temporary build directory")
 	}
 
+	outputDirectory, err := setupOutputDirectory(outputDirectoryPath)
+	if err != nil {
+		return nil, nil, trace.Wrap(err, "failed to setup output directory")
+	}
+
+	slog.Debug("Created build and output directories", "build_directory", buildDirectory.Path, "output_directory", outputDirectoryPath)
+	return buildDirectory, outputDirectory, nil
+}
+
+func setupOutputDirectory(outputDirectoryPath string) (*utils.Directory, error) {
 	if outputDirectoryPath == "" {
 		outputDirectoryPath = utils.GetTempDirectoryPath()
 	}
-	outputDirectory := utils.NewDirectory(outputDirectoryPath)
-	err = outputDirectory.Create()
-	if err != nil {
-		return nil, nil, trace.Wrap(err, "failed to create output directory at %q", outputDirectoryPath)
-	}
-	slog.Debug("Created build and output directories", "build_directory", buildDirectory.Path, "output_directory", outputDirectoryPath)
 
-	return buildDirectory, outputDirectory, nil
+	outputDirectory := utils.NewDirectory(outputDirectoryPath)
+	err := outputDirectory.Create()
+	if err != nil {
+		return nil, trace.Wrap(err, "failed to create output directory at %q", outputDirectoryPath)
+	}
+
+	// Clean the output directory if needed
+	subdirectories, err := os.ReadDir(outputDirectoryPath)
+	for _, subdirectory := range subdirectories {
+		err = os.RemoveAll(path.Join(outputDirectoryPath, subdirectory.Name()))
+		if err != nil {
+			return nil, trace.Wrap(err, "failed to remove build output contents at %q", subdirectory.Name())
+		}
+	}
+
+	return outputDirectory, nil
 }

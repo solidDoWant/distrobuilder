@@ -12,8 +12,10 @@ const SemverRegex string = `((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(
 
 type VersionChecker struct {
 	CommandRunner
-	VersionRegex   string
-	VersionChecker func(versionCaptureGroups []string) (bool, string, error)
+	VersionRegex    string
+	VersionChecker  func(versionCaptureGroups []string) (bool, string, error)
+	IgnoreErrorExit bool
+	UseStdErr       bool
 }
 
 func (vc *VersionChecker) ValidateOrError() error {
@@ -32,7 +34,9 @@ func (vc *VersionChecker) ValidateOrError() error {
 func (vc *VersionChecker) IsValidVersion() (bool, string, error) {
 	cmdResult, err := Run(vc)
 	if err != nil {
-		return false, "", trace.Wrap(err, "failed to run version checker command")
+		if !vc.IgnoreErrorExit || cmdResult.ExitCode == 0 {
+			return false, "", trace.Wrap(err, "failed to run version checker command")
+		}
 	}
 
 	versionExtractor, err := regexp.Compile(vc.VersionRegex)
@@ -40,7 +44,12 @@ func (vc *VersionChecker) IsValidVersion() (bool, string, error) {
 		return false, "", trace.Wrap(err, "failed to compile version regex %q", vc.VersionRegex)
 	}
 
-	extractedVersionMatches := versionExtractor.FindAllStringSubmatch(cmdResult.Stdout, -1)
+	outputText := cmdResult.Stdout
+	if vc.UseStdErr {
+		outputText = cmdResult.Stderr
+	}
+
+	extractedVersionMatches := versionExtractor.FindAllStringSubmatch(outputText, -1)
 	if len(extractedVersionMatches) == 0 {
 		return false, "", trace.Errorf("failed to extract version from command output %q with regex %q", cmdResult.Stdout, vc.VersionRegex)
 	}

@@ -14,27 +14,11 @@ import (
 const (
 	checkHostRequirementsFlagName string = "check-host-requirements-only"
 	skipVerificationFlagName      string = "skip-verification"
-	sourceDirectoryPathFlagName   string = "source-directory-path"
-	outputDirectoryPathFlagname   string = "output-directory-path"
-	gitRefFlagName                string = "git-ref"
 )
 
 type Builder interface {
 	GetCommand() *cli.Command
-}
-
-type DefaultActionBuilder interface {
 	GetBuilder(cliCtx *cli.Context) (build.Builder, error)
-}
-
-// Builders that use sources should implement this interface
-type SourceBuilder interface {
-	SetSourcePath(string)
-}
-
-type FilesystemOutputBuilder interface {
-	SetOutputDirectoryPath(string)
-	GetOutputDirectoryPath() string
 }
 
 func BuildCommand() *cli.Command {
@@ -50,6 +34,7 @@ func getCommands() []*cli.Command {
 	builders := []Builder{
 		&CrossLLVMCommand{},
 		&LinuxHeadersCommand{},
+		&MuslLibcCommand{},
 	}
 
 	commands := make([]*cli.Command, 0, len(builders))
@@ -65,16 +50,14 @@ func getCommand(builder Builder) *cli.Command {
 
 	setCommandFlags(command, builder)
 
-	action := command.Action
-	if defaultActionBuilder, ok := builder.(DefaultActionBuilder); ok && action == nil {
-		action = builderAction(defaultActionBuilder)
+	if command.Action == nil {
+		command.Action = builderAction(builder)
 	}
-
-	command.Action = actionWrapper(builder, action)
 
 	return command
 }
 
+// These flags are supported by all builders by virtue of the interface
 func setCommandFlags(command *cli.Command, builder Builder) {
 	checkHostRequirementsOnlyFlag := &cli.BoolFlag{
 		Name:    checkHostRequirementsFlagName,
@@ -90,52 +73,17 @@ func setCommandFlags(command *cli.Command, builder Builder) {
 		Value:   false,
 	}
 
-	if _, ok := builder.(SourceBuilder); ok {
-		sourceDirectoryPathFlag := &cli.PathFlag{
-			Name:    sourceDirectoryPathFlagName,
-			Usage:   "directory path that should be used for storing source files",
-			Aliases: []string{"S"},
-			Value:   "",
-		}
-
-		command.Flags = append(command.Flags, sourceDirectoryPathFlag)
-	}
-
-	if _, ok := builder.(FilesystemOutputBuilder); ok {
-		outputDirectoryPathFlag := &cli.PathFlag{
-			Name:    outputDirectoryPathFlagname,
-			Usage:   "path where the build outputs should be placed",
-			Aliases: []string{"O"},
-			Value:   "",
-		}
-
-		command.Flags = append(command.Flags, outputDirectoryPathFlag)
-	}
-
 	command.Flags = append(command.Flags, checkHostRequirementsOnlyFlag, skipVerificationFlag)
 }
-
-func actionWrapper(builder Builder, action cli.ActionFunc) cli.ActionFunc {
-	return func(ctx *cli.Context) error {
-		if sourceBuilder, ok := builder.(SourceBuilder); ok {
-			sourceBuilder.SetSourcePath(ctx.Path(sourceDirectoryPathFlagName))
-		}
-
-		if outputBuilder, ok := builder.(FilesystemOutputBuilder); ok {
-			outputBuilder.SetOutputDirectoryPath(ctx.Path(outputDirectoryPathFlagname))
-		}
-
-		return action(ctx)
-	}
-}
-
-func builderAction(actionBuilder DefaultActionBuilder) cli.ActionFunc {
+func builderAction(builder Builder) cli.ActionFunc {
 	action := func(cliCtx *cli.Context) error {
 		startTime := time.Now()
-		builder, err := actionBuilder.GetBuilder(cliCtx)
+		builder, err := builder.GetBuilder(cliCtx)
 		if err != nil {
 			return trace.Wrap(err, "failed to create builder")
 		}
+
+		setValuesForInterfaceFlags(builder, cliCtx)
 
 		err = builder.CheckHostRequirements()
 		if err != nil {
@@ -161,7 +109,7 @@ func builderAction(actionBuilder DefaultActionBuilder) cli.ActionFunc {
 		}
 
 		args := make([]any, 0, 2) // slog.Info requires "any" as the type
-		if outputBuilder, ok := actionBuilder.(FilesystemOutputBuilder); ok {
+		if outputBuilder, ok := builder.(build.IFilesystemOutputBuilder); ok {
 			args = append(args, "output_directory", outputBuilder.GetOutputDirectoryPath())
 		}
 
@@ -171,4 +119,24 @@ func builderAction(actionBuilder DefaultActionBuilder) cli.ActionFunc {
 	}
 
 	return action
+}
+
+// Transfers flags for optional interfaces from the command to the builder
+// This function should be called during a command's action
+func setValuesForInterfaceFlags(builder build.Builder, cliCtx *cli.Context) {
+	if sourceBuilder, ok := builder.(build.ISourceBuilder); ok {
+		sourceBuilder.SetSourceDirectoryPath(cliCtx.Path(sourceDirectoryPathFlag.Name))
+	}
+
+	if outputBuilder, ok := builder.(build.IFilesystemOutputBuilder); ok {
+		outputBuilder.SetOutputDirectoryPath(cliCtx.Path(outputDirectoryPathFlag.Name))
+	}
+
+	if toolchainBuilder, ok := builder.(build.IToolchainRequiredBuilder); ok {
+		toolchainBuilder.SetToolchainDirectory(cliCtx.String(toolchainDirectoryPathFlag.Name))
+	}
+
+	if gitRefBuilder, ok := builder.(build.IGitRefBuilder); ok {
+		gitRefBuilder.SetGitRef(cliCtx.String(gitRefFlag.Name))
+	}
 }

@@ -16,7 +16,7 @@ import (
 type LinuxHeaders struct {
 	SourceBuilder
 	FilesystemOutputBuilder
-	GitRef string
+	GitRefBuilder
 
 	// Vars for validation checking
 	sourceVersion string

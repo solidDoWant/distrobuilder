@@ -12,15 +12,12 @@ import (
 )
 
 const (
-	muslGitRefFlagName    string = "musl-" + gitRefFlagName
-	llvmGitRefFlagName    string = "llvm-" + gitRefFlagName
+	muslGitRefFlagName    string = "musl-git-ref"
+	llvmGitRefFlagName    string = "llvm-git-ref"
 	targetTripletFlagName string = "target-triplet"
 )
 
-type CrossLLVMCommand struct {
-	SourceDirectoryPath string
-	OutputDirectoryPath string
-}
+type CrossLLVMCommand struct{}
 
 func (clc *CrossLLVMCommand) GetCommand() *cli.Command {
 	return &cli.Command{
@@ -44,6 +41,8 @@ func (clc *CrossLLVMCommand) GetCommand() *cli.Command {
 				Value:  fmt.Sprintf("%s-pc-linux-musl", clc.getTripletMachineValue()),
 				Action: flags.TripletValidator,
 			},
+			sourceDirectoryPathFlag,
+			outputDirectoryPathFlag,
 		},
 	}
 }
@@ -57,8 +56,6 @@ func (clc *CrossLLVMCommand) GetBuilder(cliCtx *cli.Context) (build.Builder, err
 	builder := build.NewCrossLLVM(targetTriplet)
 	builder.LLVMGitRef = cliCtx.String(llvmGitRefFlagName)
 	builder.MuslGitRef = cliCtx.String(muslGitRefFlagName)
-	builder.SourceDirectoryPath = clc.SourceDirectoryPath
-	builder.OutputDirectoryPath = clc.OutputDirectoryPath
 
 	return builder, nil
 }
@@ -72,16 +69,4 @@ func (clc *CrossLLVMCommand) getTripletMachineValue() string {
 	default:
 		return runtime.GOARCH
 	}
-}
-
-func (clc *CrossLLVMCommand) SetSourcePath(sourceDirectoryPath string) {
-	clc.SourceDirectoryPath = sourceDirectoryPath
-}
-
-func (clc *CrossLLVMCommand) SetOutputDirectoryPath(outputDirectoryPath string) {
-	clc.OutputDirectoryPath = outputDirectoryPath
-}
-
-func (clc *CrossLLVMCommand) GetOutputDirectoryPath() string {
-	return clc.OutputDirectoryPath
 }
