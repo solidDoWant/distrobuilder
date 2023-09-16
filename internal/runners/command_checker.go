@@ -36,3 +36,19 @@ func (cc CommandChecker) DoesCommandExist() (bool, string, error) {
 
 	return false, "", nil
 }
+
+func CheckRequiredCommandsExist(requiredCommands []string) error {
+	for _, requiredCommand := range requiredCommands {
+		doesExist, _, err := CommandChecker{
+			Command: requiredCommand,
+		}.DoesCommandExist()
+		if err != nil {
+			return trace.Wrap(err, "failed to check if command %q exists", requiredCommand)
+		}
+
+		if !doesExist {
+			return trace.Errorf("required command %q does not exist", requiredCommand)
+		}
+	}
+	return nil
+}

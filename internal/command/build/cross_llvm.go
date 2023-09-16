@@ -1,11 +1,8 @@
 package command_build
 
 import (
-	"context"
 	"fmt"
-	"log/slog"
 	"runtime"
-	"time"
 
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/build"
@@ -48,44 +45,10 @@ func (clc *CrossLLVMCommand) GetCommand() *cli.Command {
 				Action: flags.TripletValidator,
 			},
 		},
-		Action: func(cliCtx *cli.Context) error {
-			startTime := time.Now()
-			builder, err := clc.GetBuilder(cliCtx)
-			if err != nil {
-				return trace.Wrap(err, "failed to create cross LLVM builder")
-			}
-
-			err = builder.CheckHostRequirements()
-			if err != nil {
-				return trace.Wrap(err, "failed to verify host requirements for cross LLVM builder")
-			}
-
-			if cliCtx.Bool(checkHostRequirementsFlagName) {
-				slog.Info(fmt.Sprintf("Completed host checks in %v", time.Since(startTime)))
-				return nil
-			}
-
-			ctx := context.Background() // TODO verify that this is the proper context for this use case
-			err = builder.Build(ctx)
-			if err != nil {
-				return trace.Wrap(err, "failed to build cross LLVM")
-			}
-
-			if !cliCtx.Bool(skipVerificationFlagName) {
-				err = builder.VerifyBuild(ctx)
-				if err != nil {
-					return trace.Wrap(err, "failed to verify completed build")
-				}
-			}
-
-			slog.Info(fmt.Sprintf("Completed build in %v", time.Since(startTime)))
-
-			return nil
-		},
 	}
 }
 
-func (clc *CrossLLVMCommand) GetBuilder(cliCtx *cli.Context) (*build.CrossLLVM, error) {
+func (clc *CrossLLVMCommand) GetBuilder(cliCtx *cli.Context) (build.Builder, error) {
 	targetTriplet, err := utils.ParseTriplet(cliCtx.String(targetTripletFlagName))
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to parse target triplet")
@@ -117,4 +80,8 @@ func (clc *CrossLLVMCommand) SetSourcePath(sourceDirectoryPath string) {
 
 func (clc *CrossLLVMCommand) SetOutputDirectoryPath(outputDirectoryPath string) {
 	clc.OutputDirectoryPath = outputDirectoryPath
+}
+
+func (clc *CrossLLVMCommand) GetOutputDirectoryPath() string {
+	return clc.OutputDirectoryPath
 }

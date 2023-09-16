@@ -1,14 +1,17 @@
 package runners
 
 import (
+	"fmt"
+
 	execute "github.com/alexellis/go-execute/pkg/v1"
 	"github.com/gravitational/trace"
 )
 
 type Make struct {
 	GenericRunner
-	Path    string // Path to the directory containing the makefile, relative to the working directory
-	Targets []string
+	Path      string // Path to the directory containing the makefile, relative to the working directory
+	Targets   []string
+	Variables map[string]string
 }
 
 func (m *Make) BuildTask() (*execute.ExecTask, error) {
@@ -21,7 +24,7 @@ func (m *Make) BuildTask() (*execute.ExecTask, error) {
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to create runner args")
 	}
-
+	args = append(args, "--no-print-directory") // This makes outputs hard to parse
 	task.Args = append(task.Args, args...)
 	task.Command = "make"
 
@@ -37,6 +40,10 @@ func (m *Make) buildArgs() ([]string, error) {
 
 	for _, target := range m.Targets {
 		args = append(args, target)
+	}
+
+	for variableName, variableValue := range m.Variables {
+		args = append(args, fmt.Sprintf("%s=%s", variableName, variableValue))
 	}
 
 	return args, nil

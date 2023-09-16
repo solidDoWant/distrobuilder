@@ -1,6 +1,8 @@
 package runners
 
 import (
+	"strings"
+
 	execute "github.com/alexellis/go-execute/pkg/v1"
 	"github.com/gravitational/trace"
 )
@@ -9,6 +11,7 @@ type CommandRunner struct {
 	GenericRunner
 	Command   string // Can be fully qualified path, relative path, or binary name. If binary name then it will be searched for via the $PATH environment variable.
 	Arguments []string
+	Stdin     string
 }
 
 func (cr CommandRunner) BuildTask() (*execute.ExecTask, error) {
@@ -31,6 +34,10 @@ func (cr CommandRunner) BuildTask() (*execute.ExecTask, error) {
 		args = append(args, arg)
 	}
 	task.Args = args
+
+	if cr.Stdin != "" {
+		task.Stdin = strings.NewReader(cr.Stdin)
+	}
 
 	return task, nil
 }

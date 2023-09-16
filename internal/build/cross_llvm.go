@@ -9,7 +9,6 @@ import (
 
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/runners"
-	"github.com/solidDoWant/distrobuilder/internal/source"
 	git_source "github.com/solidDoWant/distrobuilder/internal/source/git"
 	"github.com/solidDoWant/distrobuilder/internal/utils"
 )
@@ -24,8 +23,7 @@ type CrossLLVM struct {
 
 	// Vars for validation checking
 	hasBuildCompleted bool
-	// buildOutputPath   string
-	builtVersion string
+	sourceVersion     string
 }
 
 func NewCrossLLVM(targetTriplet *utils.Triplet) *CrossLLVM {
@@ -59,7 +57,7 @@ func (cb *CrossLLVM) buildCrossLLVM(ctx context.Context, muslHeaderDirectory str
 	slog.Info("Starting LLVM build")
 	repo := git_source.NewLLVMGitRepo(cb.SourceDirectoryPath, cb.LLVMGitRef)
 
-	buildDirectory, outputDirectory, err := cb.setupForBuild(ctx, repo, "")
+	buildDirectory, outputDirectory, err := setupForBuild(ctx, repo, cb.OutputDirectoryPath)
 	defer utils.Close(buildDirectory, &err)
 	if err != nil {
 		return trace.Wrap(err, "failed to setup for Musl headers build")
@@ -91,7 +89,7 @@ func (cb *CrossLLVM) buildCrossLLVM(ctx context.Context, muslHeaderDirectory str
 func (cb *CrossLLVM) buildMuslHeaders(ctx context.Context) (*utils.Directory, error) {
 	slog.Info("Starting Musl libc build (headers only)")
 	repo := git_source.NewMuslGitRepo(cb.SourceDirectoryPath, cb.MuslGitRef)
-	buildDirectory, outputDirectory, err := cb.setupForBuild(ctx, repo, "")
+	buildDirectory, outputDirectory, err := setupForBuild(ctx, repo, "")
 	defer utils.Close(buildDirectory, &err)
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to setup for Musl headers build")
@@ -147,36 +145,6 @@ func (cb *CrossLLVM) runMuslConfigure(sourceDirectoryPath, buildDirectoryPath, o
 	return nil
 }
 
-func (cb *CrossLLVM) setupForBuild(ctx context.Context, repo *source.GitRepo, outputDirectoryPath string) (*utils.Directory, *utils.Directory, error) {
-	repoReadableName := repo.String()
-	sourceDirectory := repo.FullDownloadPath()
-
-	slog.Info("Cloning git repo", "repo", repoReadableName, "download_path", sourceDirectory)
-	err := repo.Download(ctx)
-	if err != nil {
-		return nil, nil, trace.Wrap(err, "failed to clone %q", repoReadableName)
-	}
-
-	slog.Info("Creating build and output directories")
-	buildDirectory := utils.NewDirectory("")
-	err = buildDirectory.Create()
-	if err != nil {
-		return nil, nil, trace.Wrap(err, "failed to create temporary build directory")
-	}
-
-	if outputDirectoryPath == "" {
-		outputDirectoryPath = utils.GetTempDirectoryPath()
-	}
-	outputDirectory := utils.NewDirectory("")
-	err = outputDirectory.Create()
-	if err != nil {
-		return nil, nil, trace.Wrap(err, "failed to create output directory at %q", outputDirectoryPath)
-	}
-	slog.Debug("Created build and output directories", "build_directory", buildDirectory, "output_directory", outputDirectoryPath)
-
-	return buildDirectory, outputDirectory, nil
-}
-
 func (cb *CrossLLVM) VerifyBuild(ctx context.Context) error {
 	err := (&runners.VersionChecker{
 		CommandRunner: runners.CommandRunner{
@@ -185,11 +153,11 @@ func (cb *CrossLLVM) VerifyBuild(ctx context.Context) error {
 		},
 		VersionRegex: fmt.Sprintf("(?m)clang version %s$", runners.SemverRegex),
 
-		VersionChecker: runners.ExactSemverChecker(cb.builtVersion),
+		VersionChecker: runners.ExactSemverChecker(cb.sourceVersion),
 	}).ValidateOrError()
 
 	if err != nil {
-		return trace.Wrap(err, "failed to validate that built clang version matches source code version %q", cb.builtVersion)
+		return trace.Wrap(err, "failed to validate that built clang version matches source code version %q", cb.sourceVersion)
 	}
 
 	return nil
@@ -319,7 +287,7 @@ func (cb *CrossLLVM) recordVersion(buildDirectoryPath string) error {
 		return trace.Errorf("failed to read patch version from CMake cache values")
 	}
 
-	cb.builtVersion = fmt.Sprintf("%s.%s.%s", majorVersion, minorVersion, patchVersion)
+	cb.sourceVersion = fmt.Sprintf("%s.%s.%s", majorVersion, minorVersion, patchVersion)
 	return nil
 }
 
@@ -358,17 +326,9 @@ func (CrossLLVM) CheckHostRequirements() error {
 		"clang++",
 	}
 
-	for _, requiredCommand := range requiredCommands {
-		doesExist, _, err := runners.CommandChecker{
-			Command: requiredCommand,
-		}.DoesCommandExist()
-		if err != nil {
-			return trace.Wrap(err, "failed to check if command %q exists", requiredCommand)
-		}
-
-		if !doesExist {
-			return trace.Errorf("required command %q does not exist", requiredCommand)
-		}
+	err := runners.CheckRequiredCommandsExist(requiredCommands)
+	if err != nil {
+		return trace.Wrap(err, "failed to verify that all required commands exist")
 	}
 
 	versionCheckers := []runners.VersionChecker{

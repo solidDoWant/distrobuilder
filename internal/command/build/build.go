@@ -1,6 +1,13 @@
 package command_build
 
 import (
+	"context"
+	"fmt"
+	"log/slog"
+	"time"
+
+	"github.com/gravitational/trace"
+	"github.com/solidDoWant/distrobuilder/internal/build"
 	"github.com/urfave/cli/v2"
 )
 
@@ -15,6 +22,10 @@ type Builder interface {
 	GetCommand() *cli.Command
 }
 
+type DefaultActionBuilder interface {
+	GetBuilder(cliCtx *cli.Context) (build.Builder, error)
+}
+
 // Builders that use sources should implement this interface
 type SourceBuilder interface {
 	SetSourcePath(string)
@@ -22,6 +33,7 @@ type SourceBuilder interface {
 
 type FilesystemOutputBuilder interface {
 	SetOutputDirectoryPath(string)
+	GetOutputDirectoryPath() string
 }
 
 func BuildCommand() *cli.Command {
@@ -36,6 +48,7 @@ func BuildCommand() *cli.Command {
 func getCommands() []*cli.Command {
 	builders := []Builder{
 		&CrossLLVMCommand{},
+		&LinuxHeadersCommand{},
 	}
 
 	commands := make([]*cli.Command, 0, len(builders))
@@ -49,13 +62,19 @@ func getCommands() []*cli.Command {
 func getCommand(builder Builder) *cli.Command {
 	command := builder.GetCommand()
 
-	setCommandFlaags(command, builder)
-	command.Action = actionWrapper(builder, command.Action)
+	setCommandFlags(command, builder)
+
+	action := command.Action
+	if defaultActionBuilder, ok := builder.(DefaultActionBuilder); ok && action == nil {
+		action = builderAction(defaultActionBuilder)
+	}
+
+	command.Action = actionWrapper(builder, action)
 
 	return command
 }
 
-func setCommandFlaags(command *cli.Command, builder Builder) {
+func setCommandFlags(command *cli.Command, builder Builder) {
 	checkHostRequirementsOnlyFlag := &cli.BoolFlag{
 		Name:    checkHostRequirementsFlagName,
 		Usage:   "check host requirements only, do not build",
@@ -101,10 +120,54 @@ func actionWrapper(builder Builder, action cli.ActionFunc) cli.ActionFunc {
 			sourceBuilder.SetSourcePath(ctx.Path(sourceDirectoryPathFlagName))
 		}
 
-		if sourceBuilder, ok := builder.(FilesystemOutputBuilder); ok {
-			sourceBuilder.SetOutputDirectoryPath(ctx.Path(outputDirectoryPathFlagname))
+		if outputBuilder, ok := builder.(FilesystemOutputBuilder); ok {
+			outputBuilder.SetOutputDirectoryPath(ctx.Path(outputDirectoryPathFlagname))
 		}
 
 		return action(ctx)
 	}
+}
+
+func builderAction(actionBuilder DefaultActionBuilder) cli.ActionFunc {
+	action := func(cliCtx *cli.Context) error {
+		startTime := time.Now()
+		builder, err := actionBuilder.GetBuilder(cliCtx)
+		if err != nil {
+			return trace.Wrap(err, "failed to create builder")
+		}
+
+		err = builder.CheckHostRequirements()
+		if err != nil {
+			return trace.Wrap(err, "failed to verify host requirements for builder")
+		}
+
+		if cliCtx.Bool(checkHostRequirementsFlagName) {
+			slog.Info(fmt.Sprintf("Completed host checks in %v", time.Since(startTime)))
+			return nil
+		}
+
+		ctx := context.Background() // TODO verify that this is the proper context for this use case
+		err = builder.Build(ctx)
+		if err != nil {
+			return trace.Wrap(err, "build failed")
+		}
+
+		if !cliCtx.Bool(skipVerificationFlagName) {
+			err = builder.VerifyBuild(ctx)
+			if err != nil {
+				return trace.Wrap(err, "failed to verify completed build")
+			}
+		}
+
+		args := make([]any, 0, 2) // slog.Info requires "any" as the type
+		if outputBuilder, ok := actionBuilder.(FilesystemOutputBuilder); ok {
+			args = append(args, "output_directory", outputBuilder.GetOutputDirectoryPath())
+		}
+
+		slog.Info(fmt.Sprintf("Completed build in %v", time.Since(startTime)), args...)
+
+		return nil
+	}
+
+	return action
 }
