@@ -110,7 +110,14 @@ func (ml *MuslLibc) runMuslConfigure(sourceDirectoryPath, buildDirectoryPath str
 		ConfigurePath:       path.Join(sourceDirectoryPath, "configure"),
 		HostTriplet:         ml.Triple,
 		TargetTriplet:       ml.Triple,
-		CFlags:              fmt.Sprintf("-I%s", ml.KernelHeaderDirectoryPath),
+		CFlags: strings.Join(
+			[]string{
+				fmt.Sprintf("-I%s", ml.KernelHeaderDirectoryPath),
+				"-gz=zstd", // TODO investigate this. It appears that setting `gz` at all increases the file size.
+			},
+			" ",
+		),
+		AdditionalFlags: ml.GetLinkerFlags(),
 	})
 
 	if err != nil {

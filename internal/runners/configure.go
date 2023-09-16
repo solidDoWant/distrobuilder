@@ -18,7 +18,8 @@ type Configure struct {
 	ConfigurePath       string
 	HostTriplet         *utils.Triplet
 	TargetTriplet       *utils.Triplet
-	AdditionalFlags     map[string]string
+	AdditionalFlags     map[string]string // These values will be converted to a "key=value" output, skipping if "key" is empty
+	AdditionalArgs      []string          // These values will be appended exactly as is
 }
 
 func (c *Configure) BuildTask() (*execute.ExecTask, error) {
@@ -33,11 +34,11 @@ func (c *Configure) BuildTask() (*execute.ExecTask, error) {
 	}
 
 	// Temp debugging
-	task.Command = "/workspaces/distrobuilder/test.sh"
-	task.Args = append([]string{c.ConfigurePath}, task.Args...)
+	// task.Command = "/workspaces/distrobuilder/test.sh"
+	// task.Args = append([]string{c.ConfigurePath}, task.Args...)
 
 	task.Args = append(task.Args, args...)
-	// task.Command = c.ConfigurePath
+	task.Command = c.ConfigurePath
 
 	return task, nil
 }
@@ -59,9 +60,8 @@ func (c *Configure) buildArgs() ([]string, error) {
 	}
 	args = append(args, tripletArgs...)
 
-	for flagName, flagValue := range c.AdditionalFlags {
-		args = append(args, flagName, flagValue)
-	}
+	args = append(args, mapToArgs(c.AdditionalFlags)...)
+	args = append(args, c.AdditionalArgs...)
 
 	args = append(args, c.buildVariableArgs()...)
 
@@ -87,17 +87,25 @@ func (c *Configure) buildVariableArgs() []string {
 }
 
 func (c *Configure) buildTripletArgs() ([]string, error) {
+	args := []string{}
+
 	hostTripletArg, err := c.buildTripletArg(c.HostTriplet, "--host")
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to create host triplet args")
+	}
+	if hostTripletArg != "" {
+		args = append(args, hostTripletArg)
 	}
 
 	targetTripletArg, err := c.buildTripletArg(c.TargetTriplet, "--target")
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to create target triplet args")
 	}
+	if targetTripletArg != "" {
+		args = append(args, targetTripletArg)
+	}
 
-	return []string{hostTripletArg, targetTripletArg}, nil
+	return args, nil
 }
 
 func (c *Configure) buildTripletArg(triplet *utils.Triplet, argName string) (string, error) {
