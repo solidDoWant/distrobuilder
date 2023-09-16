@@ -86,6 +86,7 @@ func (cb *CrossLLVM) buildCrossLLVM(ctx context.Context, muslHeaderDirectory str
 	return nil
 }
 
+// TODO consider moving this out to a separate build target
 func (cb *CrossLLVM) buildMuslHeaders(ctx context.Context) (*utils.Directory, error) {
 	slog.Info("Starting Musl libc build (headers only)")
 	repo := git_source.NewMuslGitRepo(cb.SourceDirectoryPath, cb.MuslGitRef)

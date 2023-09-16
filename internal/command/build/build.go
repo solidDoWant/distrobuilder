@@ -16,6 +16,7 @@ const (
 	skipVerificationFlagName      string = "skip-verification"
 	sourceDirectoryPathFlagName   string = "source-directory-path"
 	outputDirectoryPathFlagname   string = "output-directory-path"
+	gitRefFlagName                string = "git-ref"
 )
 
 type Builder interface {

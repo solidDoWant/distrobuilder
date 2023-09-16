@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	muslGitRefFlagName    string = "musl-git-ref"
-	llvmGitRefFlagName    string = "llvm-git-ref"
+	muslGitRefFlagName    string = "musl-" + gitRefFlagName
+	llvmGitRefFlagName    string = "llvm-" + gitRefFlagName
 	targetTripletFlagName string = "target-triplet"
 )
 

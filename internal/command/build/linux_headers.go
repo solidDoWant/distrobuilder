@@ -6,8 +6,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const linuxGitRefFlagName string = "git-ref"
-
 type LinuxHeadersCommand struct {
 	SourceDirectoryPath string
 	OutputDirectoryPath string
@@ -18,7 +16,7 @@ func (lh *LinuxHeadersCommand) GetCommand() *cli.Command {
 		Name: "linux-headers",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:   linuxGitRefFlagName,
+				Name:   gitRefFlagName,
 				Usage:  "the fully qualified Git ref to build the linux headers from",
 				Value:  "refs/tags/v6.5",
 				Action: flags.GitRefValidator,
@@ -35,7 +33,7 @@ func (lh *LinuxHeadersCommand) GetBuilder(cliCtx *cli.Context) (build.Builder, e
 		FilesystemOutputBuilder: build.FilesystemOutputBuilder{
 			OutputDirectoryPath: lh.OutputDirectoryPath,
 		},
-		GitRef: cliCtx.String(linuxGitRefFlagName),
+		GitRef: cliCtx.String(gitRefFlagName),
 	}
 
 	return builder, nil
