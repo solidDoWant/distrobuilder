@@ -77,10 +77,29 @@ func (cb *CrossLLVM) buildCrossLLVM(ctx context.Context, muslHeaderDirectory str
 		return trace.Wrap(err, "failed to build and install LLVM clang via Ninja")
 	}
 
+	slog.Info("Creating output symlinks")
+	err = cb.addSymlinks()
+	if err != nil {
+		return trace.Wrap(err, "failed to create build output symlinks")
+	}
+
 	slog.Info("Recording info for validation checking")
 	err = cb.recordVersion(buildDirectory.Path)
 	if err != nil {
 		return trace.Wrap(err, "failed to record LLVM source code version")
+	}
+
+	return nil
+}
+
+func (cb *CrossLLVM) addSymlinks() error {
+	links := map[string]string{
+		"ld": "ld.lld",
+	}
+
+	err := utils.CreateSymlinks(links, path.Join(cb.OutputDirectoryPath, "bin"))
+	if err != nil {
+		return trace.Wrap(err, "failed to create all build output symlinks")
 	}
 
 	return nil
