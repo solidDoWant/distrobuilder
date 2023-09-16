@@ -192,51 +192,50 @@ func (cb *CrossLLVM) runCMake(sourceDirectory, buildDirectory, muslHeaderDirecto
 
 	_, err = runners.Run(runners.CMake{
 		Generator: "Ninja",
-		Defines: []runners.CMakeDefine{
-			{Name: "LLVM_HOST_TRIPLE", Value: hostTriplet},
-			{Name: "LLVM_TARGET_TRIPLE", Value: targetTriplet},         // The _produced_ cross compiler should produce builds for the target
-			{Name: "LLVM_DEFAULT_TARGET_TRIPLE", Value: targetTriplet}, // The _produced_ cross compiler should by default produce builds for the target
-			{Name: "CMAKE_SYSTEM_NAME", Value: "Linux"},                // This will enable cross compiling when explicitly set
-			{Name: "CMAKE_C_COMPILER_TARGET", Value: hostTriplet},      // The produced compiler should run on the host (where this build is running), rather than the target
-			{Name: "CMAKE_CXX_COMPILER_TARGET", Value: hostTriplet},
-			{Name: "CMAKE_C_COMPILER", Value: "clang"},
-			{Name: "CMAKE_CXX_COMPILER", Value: "clang++"},
-			{Name: "CMAKE_BUILD_TYPE", Value: "Release"},
-			{Name: "LLVM_ENABLE_PROJECTS", Value: "clang;clang-tools-extra;lld"},
-			{Name: "LLVM_ENABLE_RUNTIMES", Value: "compiler-rt;libcxx;libcxxabi;libunwind"},
-			{Name: "CMAKE_INSTALL_PREFIX", Value: cb.OutputDirectoryPath},
-			{Name: "LLVM_TARGETS_TO_BUILD", Value: "X86"},
-			{Name: "LLVM_APPEND_VC_REV", Value: "ON"},
-			{Name: "LLVM_ENABLE_PIC", Value: "ON"},                // Required by musl
-			{Name: "LLVM_ENABLE_LLD", Value: "ON"},                // Use the LLVM version of ld
-			{Name: "LLVM_ENABLE_ZSTD", Value: "FORCE_ON"},         // This is only supported by newer tools, but generally has much better performance than zlib
-			{Name: "LLVM_INSTALL_BINUTILS_SYMLINKS", Value: "ON"}, // Increase the change of using LLVM tools even if something is misconfigured somewhere
-			{Name: "LLVM_INSTALL_CCTOOLS_SYMLINKS", Value: "ON"},  // Increase the change of using clang even if something is misconfigured somewhere
-			{Name: "LLVM_INSTALL_UTILS", Value: "ON"},
-			{Name: "LLVM_PARALLEL_LINK_JOBS", Value: fmt.Sprintf("%d", runners.GetCmakeMaxRecommendedParallelLinkJobs())}, // Setting this too high will cause the build processes to get OOM killed
-			{Name: "LLVM_CCACHE_BUILD", Value: "ON"},                                                                      // Useful for development to reduce build times TODO figure out why this isn't working
-			{Name: "CMAKE_C_COMPILER_LAUNCHER", Value: "ccache"},
-			{Name: "CMAKE_CXX_COMPILER_LAUNCHER", Value: "ccache"},
-			{Name: "COMPILER_RT_BUILD_SANITIZERS", Value: "OFF"}, // Disable features that are not needed for the cross compiler
-			{Name: "COMPILER_RT_BUILD_MEMPROF", Value: "OFF"},
-			{Name: "COMPILER_RT_BUILD_LIBFUZZER", Value: "OFF"}, // Enabling this will cause the build to fail when LIBCXX_HAS_MUSL_LIBC is enabled
-			{Name: "COMPILER_RT_BUILD_XRAY", Value: "OFF"},      // Enabling this will cause the build to fail when LIBCXX_HAS_MUSL_LIBC is enabled
-			{Name: "COMPILER_RT_BUILD_ORC", Value: "OFF"},
-			{Name: "COMPILER_RT_BUILD_PROFILE", Value: "OFF"},
-			{Name: "CLANG_DEFAULT_RTLIB", Value: "compiler-rt"}, // Use the newly built runtimes
-			{Name: "CLANG_DEFAULT_UNWINDLIB", Value: "libunwind"},
-			{Name: "CLANG_DEFAULT_CXX_STDLIB", Value: "libc++"},
-			{Name: "LIBCXX_HAS_MUSL_LIBC", Value: "ON"},
-			{Name: "LIBCXX_CXX_ABI", Value: "libcxxabi"}, // Tell the runtimes to link against LLVM libs rather than GCC
-			{Name: "LIBCXX_USE_COMPILER_RT", Value: "ON"},
-			{Name: "LIBCXX_ADDITIONAL_COMPILE_FLAGS", Value: muslHeaderFlag},    // Configure libc++ to search the Musl libc include directory
-			{Name: "LIBCXXABI_ADDITIONAL_COMPILE_FLAGS", Value: muslHeaderFlag}, // Configure libc++ abi to search the Musl libc include directory
-			{Name: "LIBCXXABI_USE_LLVM_UNWINDER", Value: "ON"},
-			{Name: "LIBCXXABI_USE_COMPILER_RT", Value: "ON"},
-			{Name: "LIBCXXABI_USE_COMPILER_RT", Value: "ON"},
-			{Name: "LIBUNWIND_USER_COMPILER_RT", Value: "ON"},
-			{Name: "CLANG_VENDOR", Value: cb.Vendor}, // Branding
-			{Name: "LLD_VENDOR", Value: cb.Vendor},
+		Defines: map[string]string{
+			"LLVM_HOST_TRIPLE":                   hostTriplet,
+			"LLVM_TARGET_TRIPLE":                 targetTriplet, // The _produced_ cross compiler should produce builds for the target
+			"LLVM_DEFAULT_TARGET_TRIPLE":         targetTriplet, // The _produced_ cross compiler should by default produce builds for the target
+			"CMAKE_SYSTEM_NAME":                  "Linux",       // This will enable cross compiling when explicitly set
+			"CMAKE_C_COMPILER_TARGET":            hostTriplet,   // The produced compiler should run on the host (where this build is running), rather than the target
+			"CMAKE_CXX_COMPILER_TARGET":          hostTriplet,
+			"CMAKE_C_COMPILER":                   "clang",
+			"CMAKE_CXX_COMPILER":                 "clang++",
+			"CMAKE_BUILD_TYPE":                   "Release",
+			"LLVM_ENABLE_PROJECTS":               "clang;clang-tools-extra;lld",
+			"LLVM_ENABLE_RUNTIMES":               "compiler-rt;libcxx;libcxxabi;libunwind",
+			"CMAKE_INSTALL_PREFIX":               cb.OutputDirectoryPath,
+			"LLVM_TARGETS_TO_BUILD":              "X86",
+			"LLVM_APPEND_VC_REV":                 "ON",
+			"LLVM_ENABLE_PIC":                    "ON",       // Required by musl
+			"LLVM_ENABLE_LLD":                    "ON",       // Use the LLVM version of ld
+			"LLVM_ENABLE_ZSTD":                   "FORCE_ON", // This is only supported by newer tools, but generally has much better performance than zlib
+			"LLVM_INSTALL_BINUTILS_SYMLINKS":     "ON",       // Increase the change of using LLVM tools even if something is misconfigured somewhere
+			"LLVM_INSTALL_CCTOOLS_SYMLINKS":      "ON",       // Increase the change of using clang even if something is misconfigured somewhere
+			"LLVM_INSTALL_UTILS":                 "ON",
+			"LLVM_PARALLEL_LINK_JOBS":            fmt.Sprintf("%d", runners.GetCmakeMaxRecommendedParallelLinkJobs()), // Setting this too high will cause the build processes to get OOM killed
+			"LLVM_CCACHE_BUILD":                  "ON",                                                                // Useful for development to reduce build times TODO figure out why this isn't working
+			"CMAKE_C_COMPILER_LAUNCHER":          "ccache",
+			"CMAKE_CXX_COMPILER_LAUNCHER":        "ccache",
+			"COMPILER_RT_BUILD_SANITIZERS":       "OFF", // Disable features that are not needed for the cross compiler
+			"COMPILER_RT_BUILD_MEMPROF":          "OFF",
+			"COMPILER_RT_BUILD_LIBFUZZER":        "OFF", // Enabling this will cause the build to fail when LIBCXX_HAS_MUSL_LIBC is enabled
+			"COMPILER_RT_BUILD_XRAY":             "OFF", // Enabling this will cause the build to fail when LIBCXX_HAS_MUSL_LIBC is enabled
+			"COMPILER_RT_BUILD_ORC":              "OFF",
+			"COMPILER_RT_BUILD_PROFILE":          "OFF",
+			"CLANG_DEFAULT_RTLIB":                "compiler-rt", // Use the newly built runtimes
+			"CLANG_DEFAULT_UNWINDLIB":            "libunwind",
+			"CLANG_DEFAULT_CXX_STDLIB":           "libc++",
+			"LIBCXX_HAS_MUSL_LIBC":               "ON",
+			"LIBCXX_CXX_ABI":                     "libcxxabi", // Tell the runtimes to link against LLVM libs rather than GCC
+			"LIBCXX_USE_COMPILER_RT":             "ON",
+			"LIBCXX_ADDITIONAL_COMPILE_FLAGS":    muslHeaderFlag, // Configure libc++ to search the Musl libc include directory
+			"LIBCXXABI_ADDITIONAL_COMPILE_FLAGS": muslHeaderFlag, // Configure libc++ abi to search the Musl libc include directory
+			"LIBCXXABI_USE_LLVM_UNWINDER":        "ON",
+			"LIBCXXABI_USE_COMPILER_RT":          "ON",
+			"LIBUNWIND_USER_COMPILER_RT":         "ON",
+			"CLANG_VENDOR":                       cb.Vendor, // Branding
+			"LLD_VENDOR":                         cb.Vendor,
 		},
 		Undefines: []string{
 			"CLANG_VENDOR_UTI",

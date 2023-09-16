@@ -1,6 +1,7 @@
 package runners
 
 import (
+	"fmt"
 	"log/slog"
 
 	execute "github.com/alexellis/go-execute/pkg/v1"
@@ -72,4 +73,17 @@ func prettyPrintTask(task *execute.ExecTask) string {
 	}
 
 	return output
+}
+
+func mapToArgs(m map[string]string) []string {
+	args := make([]string, 0, len(m))
+	for varName, varValue := range m {
+		if varName == "" {
+			continue
+		}
+
+		args = append(args, fmt.Sprintf("%s=%s", varName, varValue))
+	}
+
+	return args
 }

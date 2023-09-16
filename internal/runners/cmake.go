@@ -12,28 +12,17 @@ import (
 	"github.com/solidDoWant/distrobuilder/internal/utils"
 )
 
-type CMakeDefine struct {
-	Name  string
-	Value string
-}
+type CMakeDefines map[string]string
 
-func (cmd *CMakeDefine) AsArg() (string, error) {
-	if cmd.Value == "" {
-		return "", trace.Errorf("variable name must be set")
-	}
-
-	if cmd.Value == "" {
-		return "", trace.Errorf("variable value must be set")
-	}
-
-	return fmt.Sprintf("-D%s=%s", cmd.Name, cmd.Value), nil
+func (cmds *CMakeDefines) AsArgs() []string {
+	return mapToArgs(*cmds)
 }
 
 type CMake struct {
 	GenericRunner
 	Generator string
 	Undefines []string
-	Defines   []CMakeDefine
+	Defines   CMakeDefines
 	Caches    []string
 	Path      string
 }
@@ -69,14 +58,7 @@ func (cm *CMake) buildArgs() ([]string, error) {
 		args = append(args, fmt.Sprintf("-U%s", undefine))
 	}
 
-	for _, define := range cm.Defines {
-		arg, err := define.AsArg()
-		if err != nil {
-			return nil, trace.Wrap(err, "failed to build define arg %v", define)
-		}
-
-		args = append(args, arg)
-	}
+	args = append(args, cm.Defines.AsArgs()...)
 
 	for _, cache := range cm.Caches {
 		args = append(args, "-C", cache)
