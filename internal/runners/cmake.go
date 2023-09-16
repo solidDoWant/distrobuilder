@@ -15,7 +15,12 @@ import (
 type CMakeDefines map[string]string
 
 func (cmds *CMakeDefines) AsArgs() []string {
-	return mapToArgs(*cmds)
+	formattedDefines := make(map[string]string, len(*cmds))
+	for name, value := range *cmds {
+		formattedDefines[fmt.Sprintf("-D%s", name)] = value
+	}
+
+	return mapToArgs(formattedDefines)
 }
 
 type CMake struct {
@@ -38,11 +43,8 @@ func (cm CMake) BuildTask() (*execute.ExecTask, error) {
 		return nil, trace.Wrap(err, "failed to create runner args")
 	}
 
-	task.Args = append([]string{"cmake"}, task.Args...)
 	task.Args = append(task.Args, args...)
-
-	// task.Command = "cmake"
-	task.Command = "/workspaces/distrobuilder/test.sh"
+	task.Command = "cmake"
 
 	return task, nil
 }
