@@ -29,7 +29,7 @@ func CommonOptions() *CMakeOptions {
 	}
 }
 
-func DebugOptions() *CMakeOptions {
+func DebugCMakeOptions() *CMakeOptions {
 	toolFlags := args.SeparatorValues(" ", "-v") // "-v" will tell clang to output the full commands that it generates along with some other info
 	return &CMakeOptions{
 		Defines: map[string]args.IValue{

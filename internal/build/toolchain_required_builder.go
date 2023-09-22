@@ -1,13 +1,19 @@
 package build
 
 import (
+	"debug/elf"
+	"errors"
 	"fmt"
+	"io"
 	"path"
+	"strings"
 
+	"github.com/elliotchance/pie/v2"
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/runners"
 	"github.com/solidDoWant/distrobuilder/internal/runners/args"
 	"github.com/solidDoWant/distrobuilder/internal/utils"
+	"golang.org/x/exp/slices"
 )
 
 const compressionLibrary = "zstd"
@@ -72,6 +78,7 @@ func (trb *ToolchainRequiredBuilder) GetConfigurenOptions(installSubdirectory st
 			"CXX":      args.StringValue(trb.GetPathForTool("clang++")),
 			"CFLAGS":   compilerFlags,
 			"CXXFLAGS": compilerFlags,
+			"LIBCC":    args.StringValue("-lclang_rt.builtins"), // Replaces libgcc.a
 		},
 	}
 }
@@ -91,6 +98,44 @@ func (trb *ToolchainRequiredBuilder) CheckToolsExist() error {
 	if err != nil {
 		return trace.Wrap(err, "failed to verify that all required commands exist")
 	}
+
+	return nil
+}
+
+func (trb *ToolchainRequiredBuilder) VerifyTargetElfFile(targetExecutablePath string) error {
+	file, err := elf.Open(targetExecutablePath)
+	if err != nil {
+		return trace.Wrap(err, "failed to open executable %q for validation")
+	}
+
+	executableMachine := strings.ToLower(strings.TrimPrefix(file.Machine.String(), "EM_"))
+	targetMachine := strings.ToLower(trb.Triplet.Machine)
+	if executableMachine != targetMachine {
+		return trace.Errorf("the executable machine type %q does not match desired target machine type %q", executableMachine, targetMachine)
+	}
+
+	// TODO check if binary is position independent
+
+	interpreterSection := pie.Of(file.Progs).Filter(func(programSection *elf.Prog) bool { return programSection.Type == elf.PT_INTERP }).First()
+	if interpreterSection == nil {
+		// Assume that the binary is statically linked
+		// TODO verify that this is a valid test
+		return nil
+	}
+
+	buffer := make([]byte, interpreterSection.Filesz-1) // The last character is a null termination character, don't read it
+	_, err = interpreterSection.ReadAt(buffer, 0)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return trace.Wrap(err, "failed to read entire interpreter section from the executable")
+	}
+
+	interpreterPath := string(buffer)
+	desiredInterpreterPaths := []string{path.Join("/lib", trb.Triplet.GetDynamicLoaderName()), path.Join("/usr", "/lib", trb.Triplet.GetDynamicLoaderName())}
+	if !slices.Contains(desiredInterpreterPaths, interpreterPath) {
+		return trace.Errorf("the executable interpreter %q does not match one of expected value %v", interpreterPath, desiredInterpreterPaths)
+	}
+
+	// TODO check .dynamic section for possible host libs
 
 	return nil
 }

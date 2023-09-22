@@ -122,9 +122,10 @@ func (ml *MuslLibc) runMuslConfigure(sourceDirectoryPath, buildDirectoryPath str
 }
 
 func (ml *MuslLibc) VerifyBuild(ctx context.Context) error {
+	libcPath := path.Join(ml.OutputDirectoryPath, "usr", "lib", "libc.so")
 	isValid, version, err := (&runners.VersionChecker{
 		CommandRunner: runners.CommandRunner{
-			Command: path.Join(ml.OutputDirectoryPath, "usr", "lib", "libc.so"),
+			Command: libcPath,
 			Arguments: []string{
 				"--version",
 			},
@@ -140,6 +141,11 @@ func (ml *MuslLibc) VerifyBuild(ctx context.Context) error {
 
 	if !isValid {
 		return trace.Errorf("built musl libc version %q does not match build version %q", version, ml.sourceVersion)
+	}
+
+	err = ml.VerifyTargetElfFile(libcPath)
+	if err != nil {
+		return trace.Wrap(err, "libc file %q did not match the expected ELF values", libcPath)
 	}
 
 	return nil

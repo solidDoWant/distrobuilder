@@ -101,6 +101,10 @@ func (t *Triplet) String() string {
 	return builtString
 }
 
+func (t *Triplet) GetDynamicLoaderName() string {
+	return fmt.Sprintf("ld-%s-%s.so.1", t.LibC, t.Machine)
+}
+
 func GetTripletMachineValue() string {
 	switch runtime.GOARCH {
 	case "386":

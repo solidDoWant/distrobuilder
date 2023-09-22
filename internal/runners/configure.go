@@ -93,3 +93,14 @@ func (c *Configure) buildTripletArg(triplet *utils.Triplet, argName string) stri
 
 	return fmt.Sprintf("%s=%s", argName, triplet)
 }
+
+func DebugConfigurationOptions() *ConfigureOptions {
+	toolFlags := args.SeparatorValues(" ", "-v") // "-v" will tell clang to output the full commands that it generates along with some other info
+	return &ConfigureOptions{
+		AdditionalArgs: map[string]args.IValue{
+			"CFLAGS":   toolFlags,
+			"CXXFLAGS": toolFlags,
+			"LDFLAGS":  toolFlags,
+		},
+	}
+}

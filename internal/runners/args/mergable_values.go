@@ -40,7 +40,9 @@ func SeparatorValues(separator string, values ...any) *SeparatorValue {
 }
 
 func (sv *SeparatorValue) GetValue() string {
-	values := pie.Map(sv.Values, func(value IValue) string { return value.GetValue() })
+	values := pie.Map(sv.Values, func(value IValue) string {
+		return value.GetValue()
+	})
 	return strings.Join(values, sv.Separator)
 }
 

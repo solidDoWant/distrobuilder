@@ -3,6 +3,7 @@ package build
 import (
 	"context"
 	"log/slog"
+	"path"
 
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/runners"
@@ -68,7 +69,6 @@ func (zn *ZlibNg) runZlibNgCMake(sourceDirectoryPath, buildDirectoryPath string)
 				Defines: map[string]args.IValue{
 					"ZLIB_COMPAT":   args.OnValue(),
 					"INSTALL_UTILS": args.OnValue(),
-					"LIBCC":         args.StringValue(" "), //  Set the value to an empty non-zero length string. This ensures that the headers never reference libgcc.
 				},
 			},
 		},
@@ -97,6 +97,18 @@ func (zn *ZlibNg) runZlibNgBuild(buildDirectoryPath string) error {
 }
 
 func (zn *ZlibNg) VerifyBuild(ctx context.Context) error {
-	// TODO
+	filesToCheck := []string{
+		path.Join(zn.OutputDirectoryPath, "usr", "lib", "libz.so"),
+		path.Join(zn.OutputDirectoryPath, "usr", "bin", "minigzip"),
+		path.Join(zn.OutputDirectoryPath, "usr", "bin", "minideflate"),
+	}
+
+	for _, filePath := range filesToCheck {
+		err := zn.VerifyTargetElfFile(filePath)
+		if err != nil {
+			return trace.Wrap(err, "built file %q did not match the expected ELF values", filePath)
+		}
+	}
+
 	return nil
 }
