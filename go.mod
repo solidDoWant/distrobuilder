@@ -4,6 +4,7 @@ go 1.21.0
 
 require (
 	github.com/alexellis/go-execute v0.6.0
+	github.com/elliotchance/pie/v2 v2.8.0
 	github.com/go-git/go-git/v5 v5.9.0
 	github.com/gravitational/trace v1.3.1
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
@@ -13,6 +14,7 @@ require (
 require (
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
+	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 )
 
 require (

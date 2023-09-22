@@ -5,11 +5,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-type MuslLibcCommand struct{}
+type ZlibNgCommand struct{}
 
-func (mlc *MuslLibcCommand) GetCommand() *cli.Command {
+func (zngc *ZlibNgCommand) GetCommand() *cli.Command {
 	return &cli.Command{
-		Name: "musl-libc",
+		Name: "zlib-ng",
 		Flags: []cli.Flag{
 			sourceDirectoryPathFlag,
 			outputDirectoryPathFlag,
@@ -21,6 +21,8 @@ func (mlc *MuslLibcCommand) GetCommand() *cli.Command {
 	}
 }
 
-func (mlc *MuslLibcCommand) GetBuilder(cliCtx *cli.Context) (build.Builder, error) {
-	return &build.MuslLibc{}, nil
+func (zngc *ZlibNgCommand) GetBuilder(cliCtx *cli.Context) (build.Builder, error) {
+	builder := &build.ZlibNg{}
+
+	return builder, nil
 }

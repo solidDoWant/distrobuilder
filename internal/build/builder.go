@@ -18,10 +18,6 @@ type Builder interface {
 	// RequiredSpace() int	// TODO
 }
 
-func (trb *ToolchainRequiredBuilder) GetPathForTool(tool string) string {
-	return path.Join(trb.ToolchainPath, tool)
-}
-
 func setupForBuild(ctx context.Context, repo *source.GitRepo, outputDirectoryPath string) (*utils.Directory, *utils.Directory, error) {
 	repoReadableName := repo.String()
 	sourceDirectory := repo.FullDownloadPath()

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/gravitational/trace"
@@ -12,35 +13,46 @@ type TripletOS struct {
 	LibC   string
 }
 
+func NewTripletOS(kernel, libc string) *TripletOS {
+	return &TripletOS{
+		Kernel: kernel,
+		LibC:   libc,
+	}
+}
+
 func ParseTripletOS(val string) (*TripletOS, error) {
 	if val == "" {
 		return nil, trace.Errorf("provided value is empty")
 	}
 
 	kernel, libc, _ := strings.Cut(val, "-")
+	if kernel == "" {
+		return nil, trace.Errorf("kernel value is unset")
+	}
 
-	return &TripletOS{
-		Kernel: kernel,
-		LibC:   libc,
-	}, nil
+	return NewTripletOS(kernel, libc), nil
 }
 
-func (tos *TripletOS) AsString() (string, error) {
-	if tos.Kernel == "" {
-		return "", trace.Errorf("kernel value is unset")
-	}
-
+func (tos *TripletOS) String() string {
 	if tos.LibC == "" {
-		return tos.Kernel, nil
+		return tos.Kernel
 	}
 
-	return fmt.Sprintf("%s-%s", tos.Kernel, tos.LibC), nil
+	return fmt.Sprintf("%s-%s", tos.Kernel, tos.LibC)
 }
 
 type Triplet struct {
 	Machine string
 	Vendor  string
 	*TripletOS
+}
+
+func NewTriplet(machine, vendor string, os *TripletOS) *Triplet {
+	return &Triplet{
+		Machine:   machine,
+		Vendor:    vendor,
+		TripletOS: os,
+	}
 }
 
 func ParseTriplet(val string) (*Triplet, error) {
@@ -53,18 +65,15 @@ func ParseTriplet(val string) (*Triplet, error) {
 		return nil, trace.Errorf("provided triplet string %q does not contain a vendor and/or OS", val)
 	}
 
-	triplet := &Triplet{
-		Machine: machine,
-	}
-
 	secondHalfLeft, secondHalfRight, _ := strings.Cut(secondHalf, "-")
 
 	// This can take on many for the OS, but the only OS supported by this tool is Linux anyway
 	var tripletOSValue string
+	vendor := ""
 	if strings.ToLower(secondHalfLeft) == "linux" {
 		tripletOSValue = secondHalf
 	} else {
-		triplet.Vendor = secondHalfLeft
+		vendor = secondHalfLeft
 		tripletOSValue = secondHalfRight
 	}
 
@@ -73,12 +82,10 @@ func ParseTriplet(val string) (*Triplet, error) {
 		return nil, trace.Wrap(err, "failed to parse triplet OS for %q", val)
 	}
 
-	triplet.TripletOS = tos
-
-	return triplet, nil
+	return NewTriplet(machine, vendor, tos), nil
 }
 
-func (t *Triplet) AsString() (string, error) {
+func (t *Triplet) String() string {
 	builtString := ""
 
 	builtString += t.Machine
@@ -88,12 +95,19 @@ func (t *Triplet) AsString() (string, error) {
 		builtString += t.Vendor
 	}
 
-	osString, err := t.TripletOS.AsString()
-	if err != nil {
-		return "", trace.Wrap(err, "failed to convert triplet OS into string")
-	}
 	builtString += "-"
-	builtString += osString
+	builtString += t.TripletOS.String()
 
-	return builtString, nil
+	return builtString
+}
+
+func GetTripletMachineValue() string {
+	switch runtime.GOARCH {
+	case "386":
+		return "x86"
+	case "amd64":
+		return "x86_64"
+	default:
+		return runtime.GOARCH
+	}
 }

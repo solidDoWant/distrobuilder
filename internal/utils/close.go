@@ -1,8 +1,6 @@
 package utils
 
 import (
-	"reflect"
-
 	"github.com/gravitational/trace"
 )
 
@@ -17,7 +15,7 @@ func Close(c Closable, callerErrRef *error) {
 	}
 
 	// This doens't cover every case but covers the most common one
-	if reflect.TypeOf(c).Kind() == reflect.Ptr && reflect.ValueOf(c).IsNil() {
+	if IsNil(c) {
 		return
 	}
 

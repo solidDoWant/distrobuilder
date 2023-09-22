@@ -10,6 +10,12 @@ type SourceBuilder struct {
 }
 
 func (sb *SourceBuilder) SetSourceDirectoryPath(sourceDirectoryPath string) {
+	// Default value
+	if sourceDirectoryPath == "" {
+		sb.SourceDirectoryPath = "/tmp/source" // TODO move this to appropriate place under /var
+		return
+	}
+
 	sb.SourceDirectoryPath = sourceDirectoryPath
 }
 

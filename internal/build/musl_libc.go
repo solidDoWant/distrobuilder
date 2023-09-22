@@ -10,6 +10,7 @@ import (
 
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/runners"
+	"github.com/solidDoWant/distrobuilder/internal/runners/args"
 	git_source "github.com/solidDoWant/distrobuilder/internal/source/git"
 	"github.com/solidDoWant/distrobuilder/internal/utils"
 )
@@ -19,26 +20,17 @@ type MuslLibc struct {
 	FilesystemOutputBuilder
 	ToolchainRequiredBuilder
 	GitRefBuilder
-	Triple                    *utils.Triplet
-	KernelHeaderDirectoryPath string
+	RootFSBuilder
+	Triple *utils.Triplet
 
 	// Vars for validation checking
 	sourceVersion string
 }
 
 func (ml *MuslLibc) CheckHostRequirements() error {
-	requiredToolchainCommands := []string{
-		"clang",
-		"clang++",
-	}
-
-	for i := range requiredToolchainCommands {
-		requiredToolchainCommands[i] = ml.GetPathForTool(requiredToolchainCommands[i])
-	}
-
-	err := runners.CheckRequiredCommandsExist(requiredToolchainCommands)
+	err := ml.CheckToolsExist()
 	if err != nil {
-		return trace.Wrap(err, "failed to verify that all required commands exist")
+		return trace.Wrap(err, "failed to verify that all required toolchain tools exist")
 	}
 
 	return nil
@@ -81,13 +73,13 @@ func (ml *MuslLibc) runMuslMake(buildDirectoryPath string) error {
 		GenericRunner: runners.GenericRunner{
 			WorkingDirectory: buildDirectoryPath,
 			EnvironmentVariables: map[string]string{
-				"PATH": fmt.Sprintf("%s%c%s", ml.ToolchainPath, os.PathListSeparator, os.Getenv("PATH")), // Path is set to ensure that builds use toolchain tools when not prefixed properly
+				"PATH": fmt.Sprintf("%s%c%s", path.Join(ml.ToolchainPath, "bin"), os.PathListSeparator, os.Getenv("PATH")), // Path is set to ensure that builds use toolchain tools when not prefixed properly
 			},
 		},
 		Path:    ".",
 		Targets: []string{"install"},
 		Variables: map[string]string{
-			"DESTDIR": ml.OutputDirectoryPath, // This must be set so that all files are installed/written to the output directory
+			"DESTDIR": path.Join(ml.OutputDirectoryPath, "usr"), // This must be set so that all files are installed/written to the output directory
 		},
 	})
 
@@ -103,21 +95,23 @@ func (ml *MuslLibc) runMuslConfigure(sourceDirectoryPath, buildDirectoryPath str
 		GenericRunner: runners.GenericRunner{
 			WorkingDirectory: buildDirectoryPath,
 		},
-		CCompiler:           ml.GetPathForTool("clang"),
-		CppCompiler:         ml.GetPathForTool("clang++"),
-		InstallPath:         "/", // This path is relative to DESTDIR, which is set when calling make
-		SourceDirectoryPath: sourceDirectoryPath,
-		ConfigurePath:       path.Join(sourceDirectoryPath, "configure"),
-		HostTriplet:         ml.Triple,
-		TargetTriplet:       ml.Triple,
-		CFlags: strings.Join(
-			[]string{
-				fmt.Sprintf("-I%s", ml.KernelHeaderDirectoryPath),
-				"-gz=zstd", // TODO investigate this. It appears that setting `gz` at all increases the file size.
+		Options: []*runners.ConfigureOptions{
+			// Install subdirectory is empty because Musl builds need it set when calling the makefile
+			// so that all files install under the correct directory. The makefile does not strictly
+			// follow GNU configure requirements.
+			// This path is relative to DESTDIR, which is set when calling make
+			ml.ToolchainRequiredBuilder.GetConfigurenOptions(""),
+			ml.RootFSBuilder.GetConfigurenOptions(),
+			{
+				AdditionalArgs: map[string]args.IValue{
+					"--prefix": args.StringValue("/"), //  Path is relative to "DESTDIR" which is set when invoking Make
+					"--srcdir": args.StringValue(sourceDirectoryPath),
+				},
 			},
-			" ",
-		),
-		AdditionalFlags: ml.GetLinkerFlags(),
+		},
+		ConfigurePath: path.Join(sourceDirectoryPath, "configure"),
+		HostTriplet:   ml.Triple,
+		TargetTriplet: ml.Triple,
 	})
 
 	if err != nil {
@@ -130,7 +124,7 @@ func (ml *MuslLibc) runMuslConfigure(sourceDirectoryPath, buildDirectoryPath str
 func (ml *MuslLibc) VerifyBuild(ctx context.Context) error {
 	isValid, version, err := (&runners.VersionChecker{
 		CommandRunner: runners.CommandRunner{
-			Command: path.Join(ml.OutputDirectoryPath, "lib", "libc.so"),
+			Command: path.Join(ml.OutputDirectoryPath, "usr", "lib", "libc.so"),
 			Arguments: []string{
 				"--version",
 			},

@@ -8,6 +8,7 @@ import (
 
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/build"
+	"github.com/solidDoWant/distrobuilder/internal/utils"
 	"github.com/urfave/cli/v2"
 )
 
@@ -35,6 +36,8 @@ func getCommands() []*cli.Command {
 		&CrossLLVMCommand{},
 		&LinuxHeadersCommand{},
 		&MuslLibcCommand{},
+		&ZlibNgCommand{},
+		&RootFilesystemCommand{},
 	}
 
 	commands := make([]*cli.Command, 0, len(builders))
@@ -133,10 +136,17 @@ func setValuesForInterfaceFlags(builder build.Builder, cliCtx *cli.Context) {
 	}
 
 	if toolchainBuilder, ok := builder.(build.IToolchainRequiredBuilder); ok {
-		toolchainBuilder.SetToolchainDirectory(cliCtx.String(toolchainDirectoryPathFlag.Name))
+		toolchainBuilder.SetToolchainDirectory(cliCtx.Path(toolchainDirectoryPathFlag.Name))
+		// This is validated by the CLI parser so it is safe to throw away the error ret value here
+		triplet, _ := utils.ParseTriplet(cliCtx.String(targetTripletFlag.Name))
+		toolchainBuilder.SetTargetTriplet(triplet)
 	}
 
 	if gitRefBuilder, ok := builder.(build.IGitRefBuilder); ok {
 		gitRefBuilder.SetGitRef(cliCtx.String(gitRefFlag.Name))
+	}
+
+	if rootFSBuilder, ok := builder.(build.IRootFSBuilder); ok {
+		rootFSBuilder.SetRootFSDirectoryPath(cliCtx.Path(rootFSDirectoryPathFlag.Name))
 	}
 }

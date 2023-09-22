@@ -7,29 +7,61 @@ import (
 	"strings"
 
 	execute "github.com/alexellis/go-execute/pkg/v1"
+	pie "github.com/elliotchance/pie/v2"
 	"github.com/gravitational/trace"
 	"github.com/pbnjay/memory"
+	"github.com/solidDoWant/distrobuilder/internal/runners/args"
 	"github.com/solidDoWant/distrobuilder/internal/utils"
 )
 
-type CMakeDefines map[string]string
+type CMakeOptions struct {
+	Undefines []string
+	Defines   map[string]args.IValue
+	Caches    []string
+}
 
-func (cmds *CMakeDefines) AsArgs() []string {
-	formattedDefines := make(map[string]string, len(*cmds))
-	for name, value := range *cmds {
-		formattedDefines[fmt.Sprintf("-D%s", name)] = value
+func CommonOptions() *CMakeOptions {
+	return &CMakeOptions{
+		Defines: map[string]args.IValue{
+			"CMAKE_BUILD_TYPE":  args.StringValue("Release"),
+			"CMAKE_SYSTEM_NAME": args.StringValue("Linux"), // This will enable cross compiling when set
+		},
+	}
+}
+
+func DebugOptions() *CMakeOptions {
+	toolFlags := args.SeparatorValues(" ", "-v") // "-v" will tell clang to output the full commands that it generates along with some other info
+	return &CMakeOptions{
+		Defines: map[string]args.IValue{
+			"CMAKE_C_FLAGS":             toolFlags,
+			"CMAKE_CXX_FLAGS":           toolFlags,
+			"CMAKE_EXE_LINKER_FLAGS":    toolFlags,
+			"CMAKE_MODULE_LINKER_FLAGS": toolFlags,
+			"CMAKE_SHARED_LINKER_FLAGS": toolFlags,
+			"CMAKE_STATIC_LINKER_FLAGS": toolFlags,
+		},
+	}
+}
+
+func MergeCMakeOptions(options ...*CMakeOptions) (*CMakeOptions, error) {
+	options = utils.FilterNil(options)
+	mergedDefines, err := args.MergeMap(pie.Map(options, func(option *CMakeOptions) map[string]args.IValue { return option.Defines })...)
+	if err != nil {
+		return nil, trace.Wrap(err, "failed to merge all CMake variable define values")
 	}
 
-	return mapToArgs(formattedDefines)
+	return &CMakeOptions{
+		Undefines: utils.DedupeReduce(pie.Map(options, func(option *CMakeOptions) []string { return option.Undefines })...),
+		Defines:   mergedDefines,
+		Caches:    utils.DedupeReduce(pie.Map(options, func(option *CMakeOptions) []string { return option.Caches })...),
+	}, nil
 }
 
 type CMake struct {
 	GenericRunner
 	Generator string
-	Undefines []string
-	Defines   CMakeDefines
-	Caches    []string
 	Path      string
+	Options   []*CMakeOptions
 }
 
 func (cm CMake) BuildTask() (*execute.ExecTask, error) {
@@ -56,15 +88,19 @@ func (cm *CMake) buildArgs() ([]string, error) {
 		args = append(args, "-G", cm.Generator)
 	}
 
-	for _, undefine := range cm.Undefines {
-		args = append(args, fmt.Sprintf("-U%s", undefine))
+	mergedOptions, err := MergeCMakeOptions(cm.Options...)
+	if err != nil {
+		return nil, trace.Wrap(err, "failed to merge CMake options")
 	}
 
-	args = append(args, cm.Defines.AsArgs()...)
-
-	for _, cache := range cm.Caches {
-		args = append(args, "-C", cache)
-	}
+	args = pie.Flat([][]string{
+		args,
+		pie.Of(mergedOptions.Undefines).Map(func(s string) string { return fmt.Sprintf("-U%s", s) }).Result,
+		pie.Map(pie.Keys(mergedOptions.Defines), func(varName string) string {
+			return fmt.Sprintf("-D%s=%s", varName, mergedOptions.Defines[varName].GetValue())
+		}),
+		pie.Of(mergedOptions.Caches).Map(func(s string) string { return fmt.Sprintf("-C %s", s) }).Result,
+	})
 
 	if cm.Path == "" {
 		cm.Path = "."

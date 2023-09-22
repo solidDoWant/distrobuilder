@@ -47,6 +47,49 @@
       ]
     },
     {
+      "name": "Launch build root-filesystem",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "build",
+        "root-filesystem",
+        "--output-directory-path",
+        "/tmp/output/root-filesystem"
+      ]
+    },
+    {
+      "name": "Launch package root-filesystem",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "package",
+        "tarball",
+        "--build-output-path",
+        "/tmp/output/root-filesystem",
+        "--output-file-path",
+        "/tmp/package/root-filesystem.tar.gz"
+      ]
+    },
+    {
+      "name": "Launch install root-filesystem",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "install",
+        "tarball",
+        "-s",
+        "/tmp/package/root-filesystem.tar.gz",
+        "-D",
+        "/tmp/root-filesystem"
+      ]
+    },
+    {
       "name": "Launch build linux-headers",
       "type": "go",
       "request": "launch",
@@ -88,7 +131,7 @@
         "-s",
         "/tmp/package/linux-headers.tar.gz",
         "-D",
-        "/tmp/install/linux-headers"
+        "/tmp/root-filesystem"
       ]
     },
     {
@@ -103,9 +146,9 @@
         "--output-directory-path",
         "/tmp/output/musl-libc",
         "--toolchain-directory-path",
-        "/tmp/output/llvm/bin",
-        "--linux-header-directory-path",
-        "/tmp/output/linux-headers"
+        "/tmp/output/cross-llvm",
+        "--root-fs-directory-path",
+        "/tmp/root-filesystem"
       ]
     },
     {
@@ -137,8 +180,57 @@
         "-s",
         "/tmp/package/musl-libc.tar.gz",
         "-D",
-        "/tmp/install/musl-libc"
+        "/tmp/root-filesystem"
       ]
-    }
+    },
+    {
+      "name": "Launch build zlib-ng",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "build",
+        "zlib-ng",
+        "--output-directory-path",
+        "/tmp/output/zlib-ng",
+        "--toolchain-directory-path",
+        "/tmp/output/cross-llvm",
+        "--root-fs-directory-path",
+        "/tmp/root-filesystem"
+      ]
+    },
+    {
+      "name": "Launch package zlib-ng",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "package",
+        "tarball",
+        "-c",
+        "--build-output-path",
+        "/tmp/output/zlib-ng",
+        "--output-file-path",
+        "/tmp/package/zlib-ng.tar.gz"
+      ]
+    },
+    {
+      "name": "Launch install zlib-ng",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "install",
+        "tarball",
+        "-c",
+        "-s",
+        "/tmp/package/zlib-ng.tar.gz",
+        "-D",
+        "/tmp/root-filesystem"
+      ]
+    },
   ]
 }

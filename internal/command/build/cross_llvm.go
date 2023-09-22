@@ -2,7 +2,6 @@ package command_build
 
 import (
 	"fmt"
-	"runtime"
 
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/build"
@@ -38,7 +37,7 @@ func (clc *CrossLLVMCommand) GetCommand() *cli.Command {
 			&cli.StringFlag{
 				Name:   targetTripletFlagName,
 				Usage:  "the GNU triplet that the built compiler should target when ran",
-				Value:  fmt.Sprintf("%s-pc-linux-musl", clc.getTripletMachineValue()),
+				Value:  fmt.Sprintf("%s-pc-linux-musl", utils.GetTripletMachineValue()),
 				Action: flags.TripletValidator,
 			},
 			sourceDirectoryPathFlag,
@@ -58,15 +57,4 @@ func (clc *CrossLLVMCommand) GetBuilder(cliCtx *cli.Context) (build.Builder, err
 	builder.MuslGitRef = cliCtx.String(muslGitRefFlagName)
 
 	return builder, nil
-}
-
-func (clc *CrossLLVMCommand) getTripletMachineValue() string {
-	switch runtime.GOARCH {
-	case "386":
-		return "x86"
-	case "amd64":
-		return "x86_64"
-	default:
-		return runtime.GOARCH
-	}
 }

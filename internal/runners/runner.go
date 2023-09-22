@@ -27,9 +27,12 @@ func Run(runner Runner) (*execute.ExecResult, error) {
 		return nil, trace.Wrap(err, "failed to build task")
 	}
 
+	// Debugging
+	task.StreamStdio = true
+
 	slog.Debug("running command", "command", prettyPrintTask(task))
 	result, err := task.Execute()
-	slog.Debug("command results", "exit_code", result.ExitCode, "stdout", result.Stdout, "stderr", result.Stderr)
+	// slog.Debug("command results", "exit_code", result.ExitCode, "stdout", result.Stdout, "stderr", result.Stderr)
 	if err != nil {
 		return &result, trace.Wrap(err, "failed to execute task: %#v, result: %#v", task, result)
 	}
@@ -86,4 +89,21 @@ func mapToArgs(m map[string]string) []string {
 	}
 
 	return args
+}
+
+func JoinMaps(maps ...map[string]string) map[string]string {
+	result := make(map[string]string)
+	for _, _map := range maps {
+		for k, v := range _map {
+			newVal := result[k]
+			if newVal != "" {
+				newVal += " "
+			}
+			newVal += v
+
+			result[k] = newVal
+		}
+	}
+
+	return result
 }

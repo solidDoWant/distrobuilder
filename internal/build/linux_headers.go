@@ -77,7 +77,7 @@ func (lh *LinuxHeaders) runLinuxMake(sourceDirectoryPath, buildDirectoryPath, bu
 		Path:    sourceDirectoryPath,
 		Targets: []string{buildTarget},
 		Variables: map[string]string{
-			"INSTALL_HDR_PATH": lh.OutputDirectoryPath,
+			"INSTALL_HDR_PATH": path.Join(lh.OutputDirectoryPath, "usr"),
 		},
 	})
 
@@ -102,7 +102,7 @@ func (lh *LinuxHeaders) VerifyBuild(ctx context.Context) error {
 			"-E",       // Invoke the preprocessor only
 			"-P",       // Print the preprocessor output only
 			"-include", // Include the version.h header file fron the built headers
-			path.Join(lh.OutputDirectoryPath, "include", "linux", "version.h"),
+			path.Join(lh.OutputDirectoryPath, "usr", "include", "linux", "version.h"),
 			"-", // Read input from stdin
 		},
 		Stdin: testMacroFile,
