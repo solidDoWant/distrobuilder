@@ -24,7 +24,11 @@ JQ_TEMPLATE=$(cat << EOF
             "build",
             "$BUILD_NAME",
             "--output-directory-path",
-            "/tmp/output/$BUILD_NAME"
+            "/tmp/output/$BUILD_NAME",
+            "--toolchain-directory-path",
+            "/tmp/output/cross-llvm",
+            "--root-fs-directory-path",
+            "/tmp/root-filesystem"
         ]
     },
     {
@@ -56,7 +60,7 @@ JQ_TEMPLATE=$(cat << EOF
             "-s",
             "/tmp/package/$BUILD_NAME.tar.gz",
             "-D",
-            "/tmp/install/$BUILD_NAME"
+            "/tmp/rootfs/$BUILD_NAME"
         ]
     }
 ]
