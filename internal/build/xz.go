@@ -26,11 +26,11 @@ func NewXZ() *XZ {
 		StandardBuilder: StandardBuilder{
 			Name:    "xz",
 			GitRepo: git_source.NewXZGitRepo,
-			// BinariesToCheck: []string{
-			// 	path.Join("usr", "bin", "zstd"),
-			// 	path.Join("usr", "bin", "unzstd"),
-			// 	path.Join("usr", "lib", "libzstd.so"),
-			// },
+			BinariesToCheck: []string{
+				path.Join("usr", "bin", "xz"),
+				path.Join("usr", "bin", "xzdec"),
+				path.Join("usr", "lib", "liblzma.so"),
+			},
 		},
 	}
 }
