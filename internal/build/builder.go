@@ -28,11 +28,19 @@ func setupForBuild(ctx context.Context, repo *source.GitRepo, outputDirectoryPat
 		return nil, nil, trace.Wrap(err, "failed to clone %q", repoReadableName)
 	}
 
-	slog.Info("Creating build and output directories")
-	buildDirectory := utils.NewDirectory("")
-	err = buildDirectory.Create()
+	buildDirectory, outputDirectory, err := setupDirectories(outputDirectoryPath)
 	if err != nil {
-		return nil, nil, trace.Wrap(err, "failed to create temporary build directory")
+		return nil, nil, trace.Wrap(err, "failed to setup build and output directories")
+	}
+
+	return buildDirectory, outputDirectory, nil
+}
+
+func setupDirectories(outputDirectoryPath string) (*utils.Directory, *utils.Directory, error) {
+	slog.Info("Creating build and output directories")
+	buildDirectory, err := setupBuildDirectory()
+	if err != nil {
+		return nil, nil, trace.Wrap(err, "failed to setup build directory")
 	}
 
 	outputDirectory, err := setupOutputDirectory(outputDirectoryPath)
@@ -42,6 +50,16 @@ func setupForBuild(ctx context.Context, repo *source.GitRepo, outputDirectoryPat
 
 	slog.Debug("Created build and output directories", "build_directory", buildDirectory.Path, "output_directory", outputDirectoryPath)
 	return buildDirectory, outputDirectory, nil
+}
+
+func setupBuildDirectory() (*utils.Directory, error) {
+	buildDirectory := utils.NewDirectory("")
+	err := buildDirectory.Create()
+	if err != nil {
+		return nil, trace.Wrap(err, "failed to create temporary build directory")
+	}
+
+	return buildDirectory, nil
 }
 
 func setupOutputDirectory(outputDirectoryPath string) (*utils.Directory, error) {

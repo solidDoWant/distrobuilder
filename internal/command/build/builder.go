@@ -39,6 +39,7 @@ func getCommands() []*cli.Command {
 		&MuslLibcCommand{},
 		NewZlibNgCommand(),
 		NewZstdCommand(),
+		NewXZCommand(),
 	}
 
 	commands := make([]*cli.Command, 0, len(builders))
