@@ -87,7 +87,7 @@ func (trb *ToolchainRequiredBuilder) GetConfigurenOptions(installSubdirectory st
 func (trb *ToolchainRequiredBuilder) GetEnvironmentVariables() map[string]string {
 	return map[string]string{
 		// Path is set to ensure that builds use toolchain tools when not prefixed properly
-		"PATH": fmt.Sprintf("%s%c%s", path.Join(trb.ToolchainPath, "bin"), os.PathListSeparator, os.Getenv("PATH")),
+		"PATH": fmt.Sprintf("%s%c%s", path.Join(trb.ToolchainPath, "usr", "bin"), os.PathListSeparator, os.Getenv("PATH")),
 	}
 }
 
