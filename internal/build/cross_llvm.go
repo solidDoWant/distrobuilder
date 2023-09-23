@@ -100,6 +100,29 @@ func (cb *CrossLLVM) addSymlinks() error {
 		"bin/cpp": "clang-cpp",
 	}
 
+	// LLVM does not currently have support for `as` (`llvm-as` is for llvm bitcode), `elfedit`, `gprof`,
+	// `gprofng`, or `windmc`.
+	tripletBinutilsSymlinkBinaries := []string{
+		"addr2line",
+		"ar",
+		"c++filt",
+		"dlltool",
+		"nm",
+		"objcopy",
+		"objdump",
+		"ranlib",
+		"readelf",
+		"size",
+		"strings",
+		"strip",
+		"winres",
+	}
+	for _, tripletBinutilsSymlinkBinary := range tripletBinutilsSymlinkBinaries {
+		linkName := fmt.Sprintf("%s-%s", cb.TargetTriple.String(), tripletBinutilsSymlinkBinary)
+		linkPath := path.Join("bin", linkName)
+		links[linkPath] = tripletBinutilsSymlinkBinary
+	}
+
 	err := utils.CreateSymlinks(links, path.Join(cb.OutputDirectoryPath, "usr"))
 	if err != nil {
 		return trace.Wrap(err, "failed to create all build output symlinks")
