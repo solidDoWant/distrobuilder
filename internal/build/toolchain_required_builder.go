@@ -105,7 +105,7 @@ func (trb *ToolchainRequiredBuilder) CheckToolsExist() error {
 func (trb *ToolchainRequiredBuilder) VerifyTargetElfFile(targetExecutablePath string) error {
 	file, err := elf.Open(targetExecutablePath)
 	if err != nil {
-		return trace.Wrap(err, "failed to open executable %q for validation")
+		return trace.Wrap(err, "failed to open executable for validation")
 	}
 
 	executableMachine := strings.ToLower(strings.TrimPrefix(file.Machine.String(), "EM_"))
