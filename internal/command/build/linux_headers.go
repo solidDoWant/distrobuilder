@@ -18,6 +18,6 @@ func (lh *LinuxHeadersCommand) GetCommand() *cli.Command {
 	}
 }
 
-func (lh *LinuxHeadersCommand) GetBuilder(cliCtx *cli.Context) (build.Builder, error) {
+func (lh *LinuxHeadersCommand) GetBuilder(cliCtx *cli.Context) (build.IBuilder, error) {
 	return &build.LinuxHeaders{}, nil
 }

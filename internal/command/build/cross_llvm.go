@@ -46,7 +46,7 @@ func (clc *CrossLLVMCommand) GetCommand() *cli.Command {
 	}
 }
 
-func (clc *CrossLLVMCommand) GetBuilder(cliCtx *cli.Context) (build.Builder, error) {
+func (clc *CrossLLVMCommand) GetBuilder(cliCtx *cli.Context) (build.IBuilder, error) {
 	targetTriplet, err := utils.ParseTriplet(cliCtx.String(targetTripletFlagName))
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to parse target triplet")

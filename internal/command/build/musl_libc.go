@@ -21,6 +21,6 @@ func (mlc *MuslLibcCommand) GetCommand() *cli.Command {
 	}
 }
 
-func (mlc *MuslLibcCommand) GetBuilder(cliCtx *cli.Context) (build.Builder, error) {
+func (mlc *MuslLibcCommand) GetBuilder(cliCtx *cli.Context) (build.IBuilder, error) {
 	return &build.MuslLibc{}, nil
 }

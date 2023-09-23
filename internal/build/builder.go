@@ -11,7 +11,7 @@ import (
 	"github.com/solidDoWant/distrobuilder/internal/utils"
 )
 
-type Builder interface {
+type IBuilder interface {
 	CheckHostRequirements() error
 	Build(context.Context) error
 	VerifyBuild(context.Context) error

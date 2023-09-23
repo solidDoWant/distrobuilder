@@ -16,6 +16,6 @@ func (rfc *RootFilesystemCommand) GetCommand() *cli.Command {
 	}
 }
 
-func (rfc *RootFilesystemCommand) GetBuilder(cliCtx *cli.Context) (build.Builder, error) {
+func (rfc *RootFilesystemCommand) GetBuilder(cliCtx *cli.Context) (build.IBuilder, error) {
 	return &build.RootFilesystem{}, nil
 }
