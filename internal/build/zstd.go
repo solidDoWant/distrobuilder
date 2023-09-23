@@ -26,6 +26,8 @@ func NewZstd() *Zstd {
 						"ZSTD_PROGRAMS_LINK_SHARED": args.OnValue(),
 						"ZSTD_BUILD_STATIC":         args.OnValue(),
 						"ZSTD_BUILD_TESTS":          args.OnValue(),
+						"ZSTD_ZLIB_SUPPORT":         args.OnValue(),
+						"ZSTD_LZMA_SUPPORT":         args.OnValue(),
 					},
 				},
 			),
