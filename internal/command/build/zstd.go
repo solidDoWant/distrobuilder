@@ -4,15 +4,15 @@ import (
 	"github.com/solidDoWant/distrobuilder/internal/build"
 )
 
-type ZlibNgCommand struct {
+type ZstdCommand struct {
 	StandardBuilder
 }
 
-func NewZlibNgCommand() *ZlibNgCommand {
-	return &ZlibNgCommand{
+func NewZstdCommand() *ZstdCommand {
+	return &ZstdCommand{
 		StandardBuilder: StandardBuilder{
-			Name:    "zlib-ng",
-			Builder: build.NewZLibNg(),
+			Name:    "zstd",
+			Builder: build.NewZstd(),
 		},
 	}
 }

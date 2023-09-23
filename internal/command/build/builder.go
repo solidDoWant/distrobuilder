@@ -19,7 +19,7 @@ const (
 
 type Builder interface {
 	GetCommand() *cli.Command
-	GetBuilder(cliCtx *cli.Context) (build.Builder, error)
+	GetBuilder(cliCtx *cli.Context) (build.IBuilder, error)
 }
 
 func BuildCommand() *cli.Command {
@@ -34,10 +34,11 @@ func BuildCommand() *cli.Command {
 func getCommands() []*cli.Command {
 	builders := []Builder{
 		&CrossLLVMCommand{},
+		&RootFilesystemCommand{},
 		&LinuxHeadersCommand{},
 		&MuslLibcCommand{},
-		&ZlibNgCommand{},
-		&RootFilesystemCommand{},
+		NewZlibNgCommand(),
+		NewZstdCommand(),
 	}
 
 	commands := make([]*cli.Command, 0, len(builders))
@@ -126,7 +127,7 @@ func builderAction(builder Builder) cli.ActionFunc {
 
 // Transfers flags for optional interfaces from the command to the builder
 // This function should be called during a command's action
-func setValuesForInterfaceFlags(builder build.Builder, cliCtx *cli.Context) {
+func setValuesForInterfaceFlags(builder build.IBuilder, cliCtx *cli.Context) {
 	if sourceBuilder, ok := builder.(build.ISourceBuilder); ok {
 		sourceBuilder.SetSourceDirectoryPath(cliCtx.Path(sourceDirectoryPathFlag.Name))
 	}

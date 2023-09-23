@@ -232,5 +232,54 @@
         "/tmp/root-filesystem"
       ]
     },
+    {
+      "name": "Launch build zstd",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "build",
+        "zstd",
+        "--output-directory-path",
+        "/tmp/output/zstd",
+        "--toolchain-directory-path",
+        "/tmp/output/cross-llvm",
+        "--root-fs-directory-path",
+        "/tmp/root-filesystem"
+      ]
+    },
+    {
+      "name": "Launch package zstd",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "package",
+        "tarball",
+        "-c",
+        "--build-output-path",
+        "/tmp/output/zstd",
+        "--output-file-path",
+        "/tmp/package/zstd.tar.gz"
+      ]
+    },
+    {
+      "name": "Launch install zstd",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "install",
+        "tarball",
+        "-c",
+        "-s",
+        "/tmp/package/zstd.tar.gz",
+        "-D",
+        "/tmp/rootfs/zstd"
+      ]
+    }
   ]
 }
