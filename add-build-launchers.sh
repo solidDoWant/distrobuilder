@@ -60,7 +60,7 @@ JQ_TEMPLATE=$(cat << EOF
             "-s",
             "/tmp/package/$BUILD_NAME.tar.gz",
             "-D",
-            "/tmp/rootfs/$BUILD_NAME"
+            "/tmp/root-filesystem"
         ]
     }
 ]
