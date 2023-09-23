@@ -82,7 +82,8 @@ func CMakeConfigure(cmakeSubpath string, options ...*runners.CMakeOptions) func(
 	return func(sb *StandardBuilder, sourceDirectoryPath, buildDirectoryPath string) error {
 		_, err := runners.Run(&runners.CMake{
 			GenericRunner: runners.GenericRunner{
-				WorkingDirectory: buildDirectoryPath,
+				WorkingDirectory:     buildDirectoryPath,
+				EnvironmentVariables: sb.GetEnvironmentVariables(),
 			},
 			Generator: "Ninja",
 			Path:      path.Join(sourceDirectoryPath, cmakeSubpath),
@@ -114,7 +115,8 @@ func NinjaBuild(buildTargets ...string) func(*StandardBuilder, string) error {
 			Command:   "ninja",
 			Arguments: buildTargets,
 			GenericRunner: runners.GenericRunner{
-				WorkingDirectory: buildDirectoryPath,
+				WorkingDirectory:     buildDirectoryPath,
+				EnvironmentVariables: sb.GetEnvironmentVariables(),
 			},
 		})
 		if err != nil {

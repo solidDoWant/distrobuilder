@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"strings"
 
@@ -80,6 +81,13 @@ func (trb *ToolchainRequiredBuilder) GetConfigurenOptions(installSubdirectory st
 			"CXXFLAGS": compilerFlags,
 			"LIBCC":    args.StringValue("-lclang_rt.builtins"), // Replaces libgcc.a
 		},
+	}
+}
+
+func (trb *ToolchainRequiredBuilder) GetEnvironmentVariables() map[string]string {
+	return map[string]string{
+		// Path is set to ensure that builds use toolchain tools when not prefixed properly
+		"PATH": fmt.Sprintf("%s%c%s", path.Join(trb.ToolchainPath, "bin"), os.PathListSeparator, os.Getenv("PATH")),
 	}
 }
 
