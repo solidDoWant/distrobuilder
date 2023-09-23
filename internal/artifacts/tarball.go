@@ -4,11 +4,13 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"path"
 	"strings"
+	"syscall"
 
 	"os"
 	"path/filepath"
@@ -188,11 +190,41 @@ func (t *Tarball) extractSymlink(header *tar.Header, destinationBasePath string)
 	outputFilePath := path.Join(destinationBasePath, header.Name)
 
 	err := os.Symlink(header.Linkname, outputFilePath)
-	if err != nil {
+	if err == nil {
+		return nil
+	}
+
+	if !isSymlinkExistError(err) {
 		return trace.Wrap(err, "failed to create symlink %q to %q", outputFilePath, header.Linkname)
 	}
 
+	// Attempt to remove the file and recreate
+	// This is not attmepted on every file to reduce the number of stat syscalls
+	err = os.Remove(outputFilePath)
+	if err != nil {
+		return trace.Wrap(err, "failed to remove pre-existing symlink at %q", outputFilePath)
+	}
+
+	err = os.Symlink(header.Linkname, outputFilePath)
+	if err != nil {
+		return trace.Wrap(err, "failed to create symlink %q to %q after removing pre-existing file at %q[1]", outputFilePath, header.Linkname)
+	}
+
 	return nil
+}
+
+func isSymlinkExistError(err error) bool {
+	linkErr, ok := err.(*os.LinkError)
+	if !ok {
+		return false
+	}
+
+	syscallErrNumber, ok := linkErr.Err.(syscall.Errno)
+	if !ok {
+		return false
+	}
+
+	return errors.Is(syscallErrNumber, syscall.EEXIST)
 }
 
 func (t *Tarball) updateOwnerAndPerms(header *tar.Header, outputFilePath string) error {
