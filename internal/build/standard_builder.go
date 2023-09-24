@@ -80,15 +80,22 @@ func (sb *StandardBuilder) VerifyBuild(ctx context.Context) error {
 	return nil
 }
 
+func (sb *StandardBuilder) getGenericRunner(workingDirectory string) runners.GenericRunner {
+	return runners.GenericRunner{
+		WorkingDirectory: workingDirectory,
+		Options: []*runners.GenericRunnerOptions{
+			sb.ToolchainRequiredBuilder.GetGenericRunnerOptions(),
+			sb.RootFSBuilder.GetGenericRunnerOptions(),
+		},
+	}
+}
+
 func CMakeConfigure(cmakeSubpath string, options ...*runners.CMakeOptions) func(*StandardBuilder, string, string) error {
 	return func(sb *StandardBuilder, sourceDirectoryPath, buildDirectoryPath string) error {
 		_, err := runners.Run(&runners.CMake{
-			GenericRunner: runners.GenericRunner{
-				WorkingDirectory:     buildDirectoryPath,
-				EnvironmentVariables: sb.GetEnvironmentVariables(),
-			},
-			Generator: "Ninja",
-			Path:      path.Join(sourceDirectoryPath, cmakeSubpath),
+			GenericRunner: sb.getGenericRunner(buildDirectoryPath),
+			Generator:     "Ninja",
+			Path:          path.Join(sourceDirectoryPath, cmakeSubpath),
 			Options: append(
 				[]*runners.CMakeOptions{
 					sb.FilesystemOutputBuilder.GetCMakeOptions("usr"),
@@ -165,12 +172,9 @@ func NinjaBuild(buildTargets ...string) func(*StandardBuilder, string) error {
 
 	return func(sb *StandardBuilder, buildDirectoryPath string) error {
 		_, err := runners.Run(runners.CommandRunner{
-			Command:   "ninja",
-			Arguments: buildTargets,
-			GenericRunner: runners.GenericRunner{
-				WorkingDirectory:     buildDirectoryPath,
-				EnvironmentVariables: sb.GetEnvironmentVariables(),
-			},
+			Command:       "ninja",
+			Arguments:     buildTargets,
+			GenericRunner: sb.getGenericRunner(buildDirectoryPath),
 		})
 		if err != nil {
 			return trace.Wrap(err, "failed to build %s", sb.Name)

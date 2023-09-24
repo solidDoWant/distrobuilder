@@ -71,8 +71,10 @@ func (ml *MuslLibc) Build(ctx context.Context) error {
 func (ml *MuslLibc) runMuslMake(buildDirectoryPath string) error {
 	_, err := runners.Run(&runners.Make{
 		GenericRunner: runners.GenericRunner{
-			WorkingDirectory:     buildDirectoryPath,
-			EnvironmentVariables: ml.GetEnvironmentVariables(),
+			WorkingDirectory: buildDirectoryPath,
+			Options: []*runners.GenericRunnerOptions{
+				ml.ToolchainRequiredBuilder.GetGenericRunnerOptions(),
+			},
 		},
 		Path:    ".",
 		Targets: []string{"install"},
@@ -91,8 +93,10 @@ func (ml *MuslLibc) runMuslMake(buildDirectoryPath string) error {
 func (ml *MuslLibc) runMuslConfigure(sourceDirectoryPath, buildDirectoryPath string) error {
 	_, err := runners.Run(&runners.Configure{
 		GenericRunner: runners.GenericRunner{
-			WorkingDirectory:     buildDirectoryPath,
-			EnvironmentVariables: ml.GetEnvironmentVariables(),
+			WorkingDirectory: buildDirectoryPath,
+			Options: []*runners.GenericRunnerOptions{
+				ml.ToolchainRequiredBuilder.GetGenericRunnerOptions(),
+			},
 		},
 		Options: []*runners.ConfigureOptions{
 			// Install subdirectory is empty because Musl builds need it set when calling the makefile

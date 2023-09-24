@@ -158,11 +158,8 @@ func (xz *XZ) runAutogen(sourceDirectoryPath, buildDirectoryPath string) error {
 	}
 
 	_, err = runners.Run(&runners.CommandRunner{
-		GenericRunner: runners.GenericRunner{
-			WorkingDirectory:     buildDirectoryPath,
-			EnvironmentVariables: xz.GetEnvironmentVariables(),
-		},
-		Command: path.Join(buildDirectoryPath, "autogen.sh"),
+		GenericRunner: xz.getGenericRunner(buildDirectoryPath),
+		Command:       path.Join(buildDirectoryPath, "autogen.sh"),
 	})
 	if err != nil {
 		return trace.Wrap(err, "command autogen.sh failed in build directory %q", buildDirectoryPath)
@@ -173,10 +170,7 @@ func (xz *XZ) runAutogen(sourceDirectoryPath, buildDirectoryPath string) error {
 
 func (xz *XZ) runConfigure(sourceDirectoryPath, buildDirectoryPath string, flags []string) error {
 	_, err := runners.Run(&runners.Configure{
-		GenericRunner: runners.GenericRunner{
-			WorkingDirectory:     buildDirectoryPath,
-			EnvironmentVariables: xz.GetEnvironmentVariables(),
-		},
+		GenericRunner: xz.getGenericRunner(buildDirectoryPath),
 		Options: []*runners.ConfigureOptions{
 			xz.ToolchainRequiredBuilder.GetConfigurenOptions(""),
 			xz.RootFSBuilder.GetConfigurenOptions(),
@@ -201,12 +195,9 @@ func (xz *XZ) runMake(makefileDirectoryPath, outputDirectoryPath string, targets
 	}
 
 	_, err := runners.Run(&runners.Make{
-		GenericRunner: runners.GenericRunner{
-			WorkingDirectory:     makefileDirectoryPath,
-			EnvironmentVariables: xz.GetEnvironmentVariables(),
-		},
-		Path:    ".",
-		Targets: targets,
+		GenericRunner: xz.getGenericRunner(makefileDirectoryPath),
+		Path:          ".",
+		Targets:       targets,
 		Variables: map[string]string{
 			"DESTDIR": path.Join(outputDirectoryPath, "usr"), // This must be set so that all files are installed/written to the output directory
 		},

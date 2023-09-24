@@ -2,6 +2,7 @@ package build
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/solidDoWant/distrobuilder/internal/runners"
 	"github.com/solidDoWant/distrobuilder/internal/runners/args"
@@ -39,6 +40,15 @@ func (rfsb *RootFSBuilder) GetConfigurenOptions() *runners.ConfigureOptions {
 			"CFLAGS":   args.SeparatorValues(" ", sysrootFlag),
 			"CXXFLAGS": args.SeparatorValues(" ", sysrootFlag),
 			"LDFLAGS":  args.SeparatorValues(" ", sysrootFlag),
+		},
+	}
+}
+
+func (rfsb *RootFSBuilder) GetGenericRunnerOptions() *runners.GenericRunnerOptions {
+	return &runners.GenericRunnerOptions{
+		EnvironmentVariables: map[string]args.IValue{
+			// Path is set to so that pkg-config can find the libraries
+			"PKG_CONFIG_PATH": args.SeparatorValues(";", path.Join(rfsb.RootFSDirectoryPath, "usr", "lib", "pkgconfigs")),
 		},
 	}
 }
