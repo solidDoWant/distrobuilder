@@ -38,8 +38,9 @@ func getCommands() []*cli.Command {
 		&LinuxHeadersCommand{},
 		&MuslLibcCommand{},
 		NewZlibNgCommand(),
-		NewZstdCommand(),
 		NewXZCommand(),
+		NewLZ4Command(),
+		NewZstdCommand(),
 	}
 
 	commands := make([]*cli.Command, 0, len(builders))

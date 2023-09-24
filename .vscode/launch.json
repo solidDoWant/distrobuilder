@@ -282,6 +282,55 @@
       ]
     },
     {
+      "name": "Launch build lz4",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "build",
+        "lz4",
+        "--output-directory-path",
+        "/tmp/output/lz4",
+        "--toolchain-directory-path",
+        "/tmp/output/cross-llvm",
+        "--root-fs-directory-path",
+        "/tmp/root-filesystem"
+      ]
+    },
+    {
+      "name": "Launch package lz4",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "package",
+        "tarball",
+        "-c",
+        "--build-output-path",
+        "/tmp/output/lz4",
+        "--output-file-path",
+        "/tmp/package/lz4.tar.gz"
+      ]
+    },
+    {
+      "name": "Launch install lz4",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "install",
+        "tarball",
+        "-c",
+        "-s",
+        "/tmp/package/lz4.tar.gz",
+        "-D",
+        "/tmp/root-filesystem"
+      ]
+    },
+    {
       "name": "Launch build zstd",
       "type": "go",
       "request": "launch",
