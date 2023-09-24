@@ -22,7 +22,7 @@ type SeparatorValue struct {
 // This doesn't have to be called - it's basically syntactic sugar
 // If the provided value is not a Value instance then it is
 // converted to a string and added via a SimpleValue instance
-func SeparatorValues(separator string, values ...any) *SeparatorValue {
+func SeparatorValues[T string | rune](separator T, values ...any) *SeparatorValue {
 	convertedValues := make([]IValue, 0, len(values))
 	for _, value := range values {
 		convertedValue, ok := value.(IValue)
@@ -35,7 +35,7 @@ func SeparatorValues(separator string, values ...any) *SeparatorValue {
 
 	return &SeparatorValue{
 		Values:    convertedValues,
-		Separator: separator,
+		Separator: string(separator),
 	}
 }
 
