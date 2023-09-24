@@ -17,7 +17,8 @@ func NewZstd() *Zstd {
 		StandardBuilder: StandardBuilder{
 			Name:    "zstd",
 			GitRepo: git_source.NewZstdGitRepo,
-			DoConfiguration: CMakeConfigure(
+			DoConfiguration: CMakeConfigureFixPkgconfigPrefix(
+				path.Join("lib", "libzstd.pc"),
 				path.Join("build", "cmake"),
 				&runners.CMakeOptions{
 					Defines: map[string]args.IValue{

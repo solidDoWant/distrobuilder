@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"path"
+	"strings"
 
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/runners"
@@ -103,6 +105,57 @@ func CMakeConfigure(cmakeSubpath string, options ...*runners.CMakeOptions) func(
 
 		return nil
 	}
+}
+
+func CMakeConfigureFixPkgconfigPrefix(pkgconfigSubpath, cmakeSubpath string, options ...*runners.CMakeOptions) func(*StandardBuilder, string, string) error {
+	return func(sb *StandardBuilder, sourceDirectoryPath, buildDirectoryPath string) error {
+		err := CMakeConfigure(cmakeSubpath, options...)(sb, sourceDirectoryPath, buildDirectoryPath)
+		if err != nil {
+			return trace.Wrap(err, "failed to run CMake for %s", sb.Name)
+		}
+
+		err = updatePkgconfigPrefix(path.Join(buildDirectoryPath, pkgconfigSubpath))
+		if err != nil {
+			return trace.Wrap(err, "failed to update pkgconfig prefix for %q", sb.Name)
+		}
+
+		return nil
+	}
+}
+
+func updatePkgconfigPrefix(pkgconfigFilePath string) error {
+	// Patch the pkg-config file with the correct prefix.
+	// The CMake configuration sets this to CMAKE_INSTALL_PREFIX,
+	// which is also needed to set the install path.
+	fileContents, err := os.ReadFile(pkgconfigFilePath)
+	if err != nil {
+		return trace.Wrap(err, "failed to read pkg-config file at %q", pkgconfigFilePath)
+	}
+
+	fileLines := strings.Split(string(fileContents), "\n")
+	for i, line := range fileLines {
+		for key, value := range map[string]string{
+			"prefix":      "/usr",
+			"exec_prefix": "${prefix}",
+			"libdir":      "${prefix}/lib",
+			"includedir":  "${prefix}/include",
+		} {
+			prefix := fmt.Sprintf("%s=", key)
+			if strings.HasPrefix(line, prefix) {
+				line = fmt.Sprintf("%s%s", prefix, value)
+			}
+		}
+
+		fileLines[i] = line
+	}
+
+	fileContents = []byte(strings.Join(fileLines, "\n"))
+	err = os.WriteFile(pkgconfigFilePath, fileContents, 0644)
+	if err != nil {
+		return trace.Wrap(err, "failed to write pkg-config file at %q", pkgconfigFilePath)
+	}
+
+	return nil
 }
 
 func NinjaBuild(buildTargets ...string) func(*StandardBuilder, string) error {

@@ -14,5 +14,5 @@ func NewLZ4GitRepo(repoDirectoryPath, ref string) *source.GitRepo {
 		ref = DefaultLZ4Ref
 	}
 
-	return source.NewGitRepo("LZ4", LZ4RepoUrl, ref)
+	return source.NewGitRepo("lz4", LZ4RepoUrl, ref)
 }

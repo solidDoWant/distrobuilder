@@ -17,15 +17,15 @@ func NewLZ4() *LZ4 {
 		StandardBuilder: StandardBuilder{
 			Name:    "LZ4",
 			GitRepo: git_source.NewLZ4GitRepo,
-			DoConfiguration: CMakeConfigure(
+			DoConfiguration: CMakeConfigureFixPkgconfigPrefix(
+				"liblz4.pc",
 				path.Join("build", "cmake"),
 				&runners.CMakeOptions{
 					Defines: map[string]args.IValue{
 						"BUILD_SHARED_LIBS": args.OnValue(),
 						"BUILD_STATIC_LIBS": args.OnValue(),
 					},
-				},
-			),
+				}),
 			DoBuild: NinjaBuild(),
 			BinariesToCheck: []string{
 				path.Join("usr", "bin", "lz4"),

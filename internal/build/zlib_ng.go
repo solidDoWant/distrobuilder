@@ -17,7 +17,8 @@ func NewZLibNg() *ZlibNg {
 		StandardBuilder: StandardBuilder{
 			Name:    "zlib-ng",
 			GitRepo: git_source.NewZlibNgGitRepo,
-			DoConfiguration: CMakeConfigure(
+			DoConfiguration: CMakeConfigureFixPkgconfigPrefix(
+				"zlib.pc",
 				"",
 				&runners.CMakeOptions{
 					Defines: map[string]args.IValue{

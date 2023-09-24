@@ -91,6 +91,11 @@ func (xz *XZ) buildStage1(sourceDirectoryPath, outputDirectoryPath string) error
 		return trace.Wrap(err, "failed to execute makefile targets")
 	}
 
+	err = updatePkgconfigPrefix(path.Join(outputDirectoryPath, "usr", "lib", "pkgconfig", "liblzma.pc"))
+	if err != nil {
+		return trace.Wrap(err, "failed to update pkgconfig prefix for %q", xz.Name)
+	}
+
 	return nil
 }
 
