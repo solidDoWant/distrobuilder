@@ -26,3 +26,12 @@ func Close(c Closable, callerErrRef *error) {
 
 	*callerErrRef = trace.Wrap(closeErr, "failed to close resource")
 }
+
+func CloseChannel(c Closable, errChannel chan<- error) {
+	var err error
+	Close(c, &err)
+
+	if err != nil {
+		errChannel <- err
+	}
+}

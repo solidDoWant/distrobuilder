@@ -2,7 +2,6 @@ package runners
 
 import (
 	"fmt"
-	"log/slog"
 	"path"
 	"strings"
 
@@ -124,43 +123,43 @@ func GetCmakeMaxRecommendedParallelLinkJobs() int {
 
 func GetCmakeCacheVars(buildDirectoryPath string) (map[string]string, error) {
 	cacheFilePath := path.Join(buildDirectoryPath, "CMakeCache.txt")
+	lineChannel, errChannel := utils.StreamLines(cacheFilePath)
+	cacheVars := make(map[string]string)
+	for {
+		select {
+		case err := <-errChannel:
+			return cacheVars, trace.Wrap(err, "an error occured while reading CMakeCache file lines")
+		case cacheLine, more := <-lineChannel:
+			trimmedLine := strings.TrimSpace(cacheLine)
 
-	cacheLines, err := utils.ReadLines(cacheFilePath)
-	if err != nil {
-		return nil, trace.Wrap(err, "failed to read file lines from CMake cache at %q", cacheFilePath)
+			// Skip empty lines
+			if trimmedLine == "" {
+				continue
+			}
+
+			// Skip comments
+			if strings.HasPrefix(trimmedLine, "//") || strings.HasPrefix(trimmedLine, "#") {
+				continue
+			}
+
+			// Extract the key and value
+			keySection, value, isValidLine := strings.Cut(trimmedLine, "=")
+			if !isValidLine {
+				return cacheVars, trace.Errorf("found non-cache var line in CMake cache file %q: %q", cacheFilePath, cacheLine)
+			}
+
+			// Extract the key, trimming extra data like the type
+			key := keySection
+			lastColonIndex := strings.LastIndex(keySection, ":")
+			if lastColonIndex != -1 {
+				key = keySection[:lastColonIndex]
+			}
+
+			cacheVars[key] = value
+
+			if !more {
+				return cacheVars, nil
+			}
+		}
 	}
-
-	cacheVars := make(map[string]string, len(cacheLines))
-	for _, cacheLine := range cacheLines {
-		trimmedLine := strings.TrimSpace(cacheLine)
-
-		// Skip empty lines
-		if trimmedLine == "" {
-			continue
-		}
-
-		// Skip comments
-		if strings.HasPrefix(trimmedLine, "//") || strings.HasPrefix(trimmedLine, "#") {
-			continue
-		}
-
-		// Extract the key and value
-		keySection, value, isValidLine := strings.Cut(trimmedLine, "=")
-		if !isValidLine {
-			return cacheVars, trace.Wrap(err, "found non-cache var line in CMake cache file %q: %q", cacheFilePath, cacheLine)
-		}
-
-		// Extract the key, trimming extra data like the type
-		key := keySection
-		lastColonIndex := strings.LastIndex(keySection, ":")
-		if lastColonIndex != -1 {
-			key = keySection[:lastColonIndex]
-		}
-
-		cacheVars[key] = value
-	}
-
-	slog.Debug("loaded cmake cache vars", "vars", cacheVars)
-
-	return cacheVars, nil
 }

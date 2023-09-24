@@ -7,35 +7,61 @@ import (
 	"github.com/gravitational/trace"
 )
 
-// Efficiently read a file, split upon newline, into a string array
 func ReadLines(filePath string) ([]string, error) {
-	fileInfo, err := os.Stat(filePath)
-	if err != nil {
-		return nil, trace.Wrap(err, "failed to get file at %q", filePath)
-	}
-
-	if !fileInfo.Mode().IsRegular() {
-		return nil, trace.Wrap(err, "file at %q is not a regular file", filePath)
-	}
-
-	fileHandle, err := os.Open(filePath)
-	defer func() {
-		if fileHandle != nil {
-			closeErr := fileHandle.Close()
-			if err == nil && closeErr != nil {
-				err = trace.Wrap(closeErr, "failed to close file %q", filePath)
-			}
-		}
-	}()
-	if err != nil {
-		return nil, trace.Wrap(err, "failed to open %q for reading", filePath)
-	}
+	lineChannel, errChannel := StreamLines(filePath)
 
 	var lines []string
-	fileReader := bufio.NewScanner(fileHandle)
-	for fileReader.Scan() {
-		lines = append(lines, fileReader.Text())
+	for {
+		select {
+		case err := <-errChannel:
+			return lines, err
+		case line, more := <-lineChannel:
+			lines = append(lines, line)
+			if !more {
+				return lines, nil
+			}
+		}
 	}
+}
 
-	return lines, nil
+// Efficiently read a file, split upon newline, sending each line out via the channel
+func StreamLines(filePath string) (<-chan string, <-chan error) {
+	outChannel := make(chan string, 10) // The size here is arbitrary. Any value greater than 1 should decrease context switches at thet cost of memory.
+	errChannel := make(chan error)
+
+	go func() {
+		defer close(outChannel)
+		defer close(errChannel)
+
+		fileInfo, err := os.Stat(filePath)
+		if err != nil {
+			errChannel <- trace.Wrap(err, "failed to get file at %q", filePath)
+			return
+		}
+
+		if !fileInfo.Mode().IsRegular() {
+			errChannel <- trace.Wrap(err, "file at %q is not a regular file", filePath)
+			return
+		}
+
+		fileHandle, err := os.Open(filePath)
+		defer CloseChannel(fileHandle, errChannel)
+		if err != nil {
+			errChannel <- trace.Wrap(err, "failed to open %q for reading", filePath)
+			return
+		}
+
+		fileReader := bufio.NewScanner(fileHandle)
+
+		for fileReader.Scan() {
+			err = fileReader.Err()
+			if err != nil {
+				errChannel <- trace.Wrap(err, "an error occured while reading %q", filePath)
+				return
+			}
+			outChannel <- fileReader.Text()
+		}
+	}()
+
+	return outChannel, errChannel
 }
