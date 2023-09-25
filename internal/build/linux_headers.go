@@ -9,6 +9,7 @@ import (
 
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/runners"
+	"github.com/solidDoWant/distrobuilder/internal/runners/args"
 	git_source "github.com/solidDoWant/distrobuilder/internal/source/git"
 	"github.com/solidDoWant/distrobuilder/internal/utils"
 )
@@ -76,8 +77,8 @@ func (lh *LinuxHeaders) runLinuxMake(sourceDirectoryPath, buildDirectoryPath, bu
 		},
 		Path:    sourceDirectoryPath,
 		Targets: []string{buildTarget},
-		Variables: map[string]string{
-			"INSTALL_HDR_PATH": path.Join(lh.OutputDirectoryPath, "usr"),
+		Variables: map[string]args.IValue{
+			"INSTALL_HDR_PATH": args.StringValue(path.Join(lh.OutputDirectoryPath, "usr")),
 		},
 	})
 

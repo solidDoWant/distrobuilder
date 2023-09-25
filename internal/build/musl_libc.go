@@ -78,8 +78,8 @@ func (ml *MuslLibc) runMuslMake(buildDirectoryPath string) error {
 		},
 		Path:    ".",
 		Targets: []string{"install"},
-		Variables: map[string]string{
-			"DESTDIR": path.Join(ml.OutputDirectoryPath, "usr"), // This must be set so that all files are installed/written to the output directory
+		Variables: map[string]args.IValue{
+			"DESTDIR": args.StringValue(path.Join(ml.OutputDirectoryPath, "usr")), // This must be set so that all files are installed/written to the output directory
 		},
 	})
 

@@ -101,7 +101,7 @@ func (xz *XZ) buildStage1(sourceDirectoryPath, outputDirectoryPath string) error
 		return trace.Wrap(err, "failed to execute configure in build directory %q", buildDirectory)
 	}
 
-	err = xz.runMake(buildDirectory.Path, outputDirectoryPath)
+	err = xz.MakeBuild(buildDirectory.Path, outputDirectoryPath, xz.getMakeVars(), "all", "install-strip")
 	if err != nil {
 		return trace.Wrap(err, "failed to execute makefile targets")
 	}
@@ -126,12 +126,13 @@ func (xz *XZ) buildStage2(sourceDirectoryPath, outputDirectoryPath string) error
 		return trace.Wrap(err, "failed to execute configure in build directory %q", buildDirectory)
 	}
 
-	err = xz.runMake(path.Join(buildDirectory.Path, "src", "liblzma"), outputDirectoryPath, "all")
+	makeVars := xz.getMakeVars()
+	err = xz.MakeBuild(path.Join(buildDirectory.Path, "src", "liblzma"), outputDirectoryPath, makeVars, "all")
 	if err != nil {
 		return trace.Wrap(err, "failed to build static liblzma")
 	}
 
-	err = xz.runMake(path.Join(buildDirectory.Path, "src", "xzdec"), outputDirectoryPath)
+	err = xz.MakeBuild(path.Join(buildDirectory.Path, "src", "xzdec"), outputDirectoryPath, makeVars, "all", "install-strip")
 	if err != nil {
 		return trace.Wrap(err, "failed to build static xzdec")
 	}
@@ -204,25 +205,6 @@ func (xz *XZ) runConfigure(sourceDirectoryPath, buildDirectoryPath string, flags
 	return err
 }
 
-func (xz *XZ) runMake(makefileDirectoryPath, outputDirectoryPath string, targets ...string) error {
-	if len(targets) == 0 {
-		targets = append(targets, "all", "install-strip")
-	}
-
-	for _, target := range targets {
-		_, err := runners.Run(&runners.Make{
-			GenericRunner: xz.getGenericRunner(makefileDirectoryPath),
-			Path:          ".",
-			Targets:       []string{target},
-			Variables: map[string]string{
-				"DESTDIR": path.Join(outputDirectoryPath, "usr"), // This must be set so that all files are installed/written to the output directory
-			},
-		})
-
-		if err != nil {
-			return trace.Wrap(err, "musl libc make build failed for target %q", target)
-		}
-	}
-
-	return nil
+func (xz *XZ) getMakeVars() map[string]args.IValue {
+	return map[string]args.IValue{"DESTDIR": args.StringValue(path.Join(xz.OutputDirectoryPath, "usr"))}
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/runners"
+	"github.com/solidDoWant/distrobuilder/internal/runners/args"
 	"github.com/solidDoWant/distrobuilder/internal/source"
 	"github.com/solidDoWant/distrobuilder/internal/utils"
 )
@@ -186,6 +187,23 @@ func (sb *StandardBuilder) NinjaBuild(buildDirectoryPath string, buildTargets ..
 	})
 	if err != nil {
 		return trace.Wrap(err, "failed to build %s", sb.Name)
+	}
+
+	return nil
+}
+
+func (sb *StandardBuilder) MakeBuild(makefileDirectoryPath, outputDirectoryPath string, makeVars map[string]args.IValue, targets ...string) error {
+	for _, target := range targets {
+		_, err := runners.Run(&runners.Make{
+			GenericRunner: sb.getGenericRunner(makefileDirectoryPath),
+			Path:          ".",
+			Targets:       []string{target},
+			Variables:     makeVars,
+		})
+
+		if err != nil {
+			return trace.Wrap(err, "%s make build failed for target %q", sb.Name, target)
+		}
 	}
 
 	return nil

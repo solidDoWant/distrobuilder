@@ -6,13 +6,14 @@ import (
 
 	execute "github.com/alexellis/go-execute/pkg/v1"
 	"github.com/gravitational/trace"
+	"github.com/solidDoWant/distrobuilder/internal/runners/args"
 )
 
 type Make struct {
 	GenericRunner
 	Path      string // Path to the directory containing the makefile, relative to the working directory
 	Targets   []string
-	Variables map[string]string
+	Variables map[string]args.IValue
 }
 
 func (m *Make) BuildTask() (*execute.ExecTask, error) {
@@ -48,7 +49,7 @@ func (m *Make) buildArgs() ([]string, error) {
 	}
 
 	for variableName, variableValue := range m.Variables {
-		args = append(args, fmt.Sprintf("%s=%s", variableName, variableValue))
+		args = append(args, fmt.Sprintf("%s=%s", variableName, variableValue.GetValue()))
 	}
 
 	return args, nil
