@@ -2,6 +2,7 @@ package runners
 
 import (
 	"fmt"
+	"runtime"
 
 	execute "github.com/alexellis/go-execute/pkg/v1"
 	"github.com/gravitational/trace"
@@ -24,7 +25,11 @@ func (m *Make) BuildTask() (*execute.ExecTask, error) {
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to create runner args")
 	}
-	args = append(args, "--no-print-directory") // This makes outputs hard to parse
+	args = append(
+		args,
+		"--no-print-directory",                // This makes outputs hard to parse when not set
+		fmt.Sprintf("-j%d", runtime.NumCPU()), // Use all CPU cores
+	)
 	task.Args = append(task.Args, args...)
 	task.Command = "make"
 
