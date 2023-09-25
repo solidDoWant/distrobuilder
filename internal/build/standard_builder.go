@@ -8,6 +8,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/elliotchance/pie/v2"
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/runners"
 	"github.com/solidDoWant/distrobuilder/internal/runners/args"
@@ -135,6 +136,31 @@ func (sb *StandardBuilder) CMakeConfigureFixPkgconfigPrefix(sourceDirectoryPath,
 	err = updatePkgconfigPrefix(path.Join(buildDirectoryPath, pkgconfigSubpath))
 	if err != nil {
 		return trace.Wrap(err, "failed to update pkgconfig prefix for %q", sb.Name)
+	}
+
+	return nil
+}
+
+func (sb *StandardBuilder) GNUConfigure(sourceDirectoryPath, buildDirectoryPath string, flags ...string) error {
+	_, err := runners.Run(&runners.Configure{
+		GenericRunner: sb.getGenericRunner(buildDirectoryPath),
+		Options: []*runners.ConfigureOptions{
+			sb.ToolchainRequiredBuilder.GetConfigurenOptions(),
+			sb.RootFSBuilder.GetConfigurenOptions(),
+			{
+				AdditionalArgs: map[string]args.IValue{
+					"--prefix": args.StringValue("/"), // Path is relative to DESTDIR, set when invoking make
+					"--srcdir": args.StringValue(sourceDirectoryPath),
+					"--host":   args.StringValue(sb.ToolchainRequiredBuilder.Triplet.String()),
+				},
+				AdditionalFlags: pie.Map(flags, func(flag string) args.IValue { return args.StringValue(flag) }),
+			},
+		},
+		ConfigurePath: path.Join(sourceDirectoryPath, "configure"),
+	})
+
+	if err != nil {
+		return trace.Wrap(err, "failed to run configure script for %s", sb.Name)
 	}
 
 	return nil

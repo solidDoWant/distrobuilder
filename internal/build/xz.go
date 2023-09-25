@@ -8,7 +8,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/elliotchance/pie/v2"
 	"github.com/gravitational/trace"
 	cp "github.com/otiai10/copy"
 	"github.com/solidDoWant/distrobuilder/internal/runners"
@@ -141,20 +140,13 @@ func (xz *XZ) buildStage2(sourceDirectoryPath, outputDirectoryPath string) error
 }
 
 func (xz *XZ) configureStage1(sourceDirectoryPath, buildDirectoryPath string) error {
-	return xz.runConfigure(sourceDirectoryPath, buildDirectoryPath, []string{
-		"--disable-static",
-		"--disable-xzdec",
-		"--disable-lzmadec",
-	})
+	return xz.GNUConfigure(sourceDirectoryPath, buildDirectoryPath,
+		"--disable-static", "--disable-xzdec", "--disable-lzmadec")
 }
 
 func (xz *XZ) configureStage2(sourceDirectoryPath, buildDirectoryPath string) error {
-	return xz.runConfigure(sourceDirectoryPath, buildDirectoryPath, []string{
-		"--disable-shared",
-		"--disable-nls",
-		"--disable-encoders",
-		"--disable-threads",
-	})
+	return xz.GNUConfigure(sourceDirectoryPath, buildDirectoryPath,
+		"--disable-shared", "--disable-nls", "--disable-encoders", "--disable-threads")
 }
 
 func (xz *XZ) runAutogen(sourceDirectoryPath, buildDirectoryPath string) error {
@@ -182,27 +174,6 @@ func (xz *XZ) runAutogen(sourceDirectoryPath, buildDirectoryPath string) error {
 	}
 
 	return nil
-}
-
-func (xz *XZ) runConfigure(sourceDirectoryPath, buildDirectoryPath string, flags []string) error {
-	_, err := runners.Run(&runners.Configure{
-		GenericRunner: xz.getGenericRunner(buildDirectoryPath),
-		Options: []*runners.ConfigureOptions{
-			xz.ToolchainRequiredBuilder.GetConfigurenOptions(),
-			xz.RootFSBuilder.GetConfigurenOptions(),
-			{
-				AdditionalArgs: map[string]args.IValue{
-					"--prefix": args.StringValue("/"), // Path is relative to DESTDIR, set when invoking make
-					"--srcdir": args.StringValue(sourceDirectoryPath),
-					"--host":   args.StringValue(xz.ToolchainRequiredBuilder.Triplet.String()),
-				},
-				AdditionalFlags: pie.Map(flags, func(flag string) args.IValue { return args.StringValue(flag) }),
-			},
-		},
-		ConfigurePath: path.Join(sourceDirectoryPath, "configure"),
-	})
-
-	return err
 }
 
 func (xz *XZ) getMakeVars() map[string]args.IValue {
