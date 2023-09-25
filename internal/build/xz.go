@@ -13,6 +13,7 @@ import (
 	cp "github.com/otiai10/copy"
 	"github.com/solidDoWant/distrobuilder/internal/runners"
 	"github.com/solidDoWant/distrobuilder/internal/runners/args"
+	"github.com/solidDoWant/distrobuilder/internal/source"
 	git_source "github.com/solidDoWant/distrobuilder/internal/source/git"
 	"github.com/solidDoWant/distrobuilder/internal/utils"
 )
@@ -22,10 +23,9 @@ type XZ struct {
 }
 
 func NewXZ() *XZ {
-	return &XZ{
+	instance := &XZ{
 		StandardBuilder: StandardBuilder{
-			Name:    "xz",
-			GitRepo: git_source.NewXZGitRepo,
+			Name: "xz",
 			BinariesToCheck: []string{
 				path.Join("usr", "bin", "xz"),
 				path.Join("usr", "bin", "xzdec"),
@@ -33,12 +33,27 @@ func NewXZ() *XZ {
 			},
 		},
 	}
+
+	instance.IStandardBuilder = instance
+	return instance
+}
+
+func (xz *XZ) GetGitRepo(repoDirectoryPath string, ref string) *source.GitRepo {
+	return git_source.NewXZGitRepo(repoDirectoryPath, ref)
+}
+
+func (xz *XZ) DoConfiguration(sourceDirectoryPath string, buildDirectoryPath string) error {
+	panic("not implemented") // This is not needed because Build is overriden
+}
+
+func (xz *XZ) DoBuild(buildDirectoryPath string) error {
+	panic("not implemented") // This is not needed because Build is overriden
 }
 
 // XZ has a relatively complicated build process that requires a two stage build
 func (xz *XZ) Build(ctx context.Context) error {
 	slog.Info(fmt.Sprintf("Starting %s build", xz.Name))
-	repo := xz.GitRepo(xz.SourceDirectoryPath, xz.GitRef)
+	repo := xz.GetGitRepo(xz.SourceDirectoryPath, xz.GitRef)
 	sourcePath := repo.FullDownloadPath()
 
 	// This is the final output directory of both builds stages
@@ -194,17 +209,19 @@ func (xz *XZ) runMake(makefileDirectoryPath, outputDirectoryPath string, targets
 		targets = append(targets, "all", "install-strip")
 	}
 
-	_, err := runners.Run(&runners.Make{
-		GenericRunner: xz.getGenericRunner(makefileDirectoryPath),
-		Path:          ".",
-		Targets:       targets,
-		Variables: map[string]string{
-			"DESTDIR": path.Join(outputDirectoryPath, "usr"), // This must be set so that all files are installed/written to the output directory
-		},
-	})
+	for _, target := range targets {
+		_, err := runners.Run(&runners.Make{
+			GenericRunner: xz.getGenericRunner(makefileDirectoryPath),
+			Path:          ".",
+			Targets:       []string{target},
+			Variables: map[string]string{
+				"DESTDIR": path.Join(outputDirectoryPath, "usr"), // This must be set so that all files are installed/written to the output directory
+			},
+		})
 
-	if err != nil {
-		return trace.Wrap(err, "musl libc make build failed")
+		if err != nil {
+			return trace.Wrap(err, "musl libc make build failed for target %q", target)
+		}
 	}
 
 	return nil
