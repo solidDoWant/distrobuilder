@@ -187,7 +187,7 @@ func (xz *XZ) runConfigure(sourceDirectoryPath, buildDirectoryPath string, flags
 	_, err := runners.Run(&runners.Configure{
 		GenericRunner: xz.getGenericRunner(buildDirectoryPath),
 		Options: []*runners.ConfigureOptions{
-			xz.ToolchainRequiredBuilder.GetConfigurenOptions(""),
+			xz.ToolchainRequiredBuilder.GetConfigurenOptions(),
 			xz.RootFSBuilder.GetConfigurenOptions(),
 			{
 				AdditionalArgs: map[string]args.IValue{

@@ -103,7 +103,7 @@ func (ml *MuslLibc) runMuslConfigure(sourceDirectoryPath, buildDirectoryPath str
 			// so that all files install under the correct directory. The makefile does not strictly
 			// follow GNU configure requirements.
 			// This path is relative to DESTDIR, which is set when calling make
-			ml.ToolchainRequiredBuilder.GetConfigurenOptions(""),
+			ml.ToolchainRequiredBuilder.GetConfigurenOptions(),
 			ml.RootFSBuilder.GetConfigurenOptions(),
 			{
 				AdditionalArgs: map[string]args.IValue{

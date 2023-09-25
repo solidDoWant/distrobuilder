@@ -70,7 +70,7 @@ func (trb *ToolchainRequiredBuilder) GetCMakeOptions() *runners.CMakeOptions {
 	}
 }
 
-func (trb *ToolchainRequiredBuilder) GetConfigurenOptions(installSubdirectory string) *runners.ConfigureOptions {
+func (trb *ToolchainRequiredBuilder) GetConfigurenOptions() *runners.ConfigureOptions {
 	compilerFlags := args.SeparatorValues(" ", fmt.Sprintf("-gz=%s", compressionLibrary), fmt.Sprintf("-fuse-ld=%s", trb.GetPathForTool("ld.lld")))
 
 	return &runners.ConfigureOptions{
