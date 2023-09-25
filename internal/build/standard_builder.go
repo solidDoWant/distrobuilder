@@ -219,7 +219,7 @@ func (sb *StandardBuilder) NinjaBuild(buildDirectoryPath string, buildTargets ..
 	return nil
 }
 
-func (sb *StandardBuilder) MakeBuild(makefileDirectoryPath, outputDirectoryPath string, makeVars map[string]args.IValue, targets ...string) error {
+func (sb *StandardBuilder) MakeBuild(makefileDirectoryPath string, makeVars map[string]args.IValue, targets ...string) error {
 	for _, target := range targets {
 		_, err := runners.Run(&runners.Make{
 			GenericRunner: sb.getGenericRunner(makefileDirectoryPath),

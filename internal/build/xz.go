@@ -37,11 +37,11 @@ func NewXZ() *XZ {
 	return instance
 }
 
-func (xz *XZ) GetGitRepo(repoDirectoryPath string, ref string) *source.GitRepo {
+func (xz *XZ) GetGitRepo(repoDirectoryPath, ref string) *source.GitRepo {
 	return git_source.NewXZGitRepo(repoDirectoryPath, ref)
 }
 
-func (xz *XZ) DoConfiguration(sourceDirectoryPath string, buildDirectoryPath string) error {
+func (xz *XZ) DoConfiguration(sourceDirectoryPath, buildDirectoryPath string) error {
 	panic("not implemented") // This is not needed because Build is overriden
 }
 
@@ -100,7 +100,7 @@ func (xz *XZ) buildStage1(sourceDirectoryPath, outputDirectoryPath string) error
 		return trace.Wrap(err, "failed to execute configure in build directory %q", buildDirectory)
 	}
 
-	err = xz.MakeBuild(buildDirectory.Path, outputDirectoryPath, xz.getMakeVars(), "all", "install-strip")
+	err = xz.MakeBuild(buildDirectory.Path, xz.getMakeVars(), "all", "install-strip")
 	if err != nil {
 		return trace.Wrap(err, "failed to execute makefile targets")
 	}
@@ -126,12 +126,12 @@ func (xz *XZ) buildStage2(sourceDirectoryPath, outputDirectoryPath string) error
 	}
 
 	makeVars := xz.getMakeVars()
-	err = xz.MakeBuild(path.Join(buildDirectory.Path, "src", "liblzma"), outputDirectoryPath, makeVars, "all")
+	err = xz.MakeBuild(path.Join(buildDirectory.Path, "src", "liblzma"), makeVars, "all")
 	if err != nil {
 		return trace.Wrap(err, "failed to build static liblzma")
 	}
 
-	err = xz.MakeBuild(path.Join(buildDirectory.Path, "src", "xzdec"), outputDirectoryPath, makeVars, "all", "install-strip")
+	err = xz.MakeBuild(path.Join(buildDirectory.Path, "src", "xzdec"), makeVars, "all", "install-strip")
 	if err != nil {
 		return trace.Wrap(err, "failed to build static xzdec")
 	}

@@ -36,7 +36,7 @@ func getCommands() []*cli.Command {
 		&CrossLLVMCommand{},
 		&RootFilesystemCommand{},
 		&LinuxHeadersCommand{},
-		&MuslLibcCommand{},
+		NewMuslLibcCommand(),
 		NewZlibNgCommand(),
 		NewXZCommand(),
 		NewLZ4Command(),
