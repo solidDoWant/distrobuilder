@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"path"
-	"strings"
 
 	"github.com/gravitational/trace"
 	cp "github.com/otiai10/copy"
@@ -155,14 +153,9 @@ func (xz *XZ) runAutogen(sourceDirectoryPath, buildDirectoryPath string) error {
 	// the source contents are first copied to the build directory.
 	// Somehow Go does not have a builtin library for copying directories, so
 	// use this third party one that should cover most corner cases.
-	err := cp.Copy(sourceDirectoryPath, buildDirectoryPath, cp.Options{
-		// Skip copying ".git*" files, such as the ".git" directory and ".gitignore"
-		Skip: func(srcInfo os.FileInfo, src, dest string) (bool, error) {
-			return strings.HasPrefix(srcInfo.Name(), ".git"), nil
-		},
-	})
+	err := xz.CopyToBuildDirectory(sourceDirectoryPath, buildDirectoryPath)
 	if err != nil {
-		return trace.Wrap(err, "failed to copy source directory %q contents to build directory %q", sourceDirectoryPath, buildDirectoryPath)
+		return trace.Wrap(err, "failed to copy source directory %q to build directory %q", sourceDirectoryPath, buildDirectoryPath)
 	}
 
 	_, err = runners.Run(&runners.CommandRunner{

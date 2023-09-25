@@ -4,6 +4,10 @@
 * Implement the following builders:
     * LLVM projects for target targeting target
     * Kernel
+    * SELinux
+    * PAM
+    * libressl
+    * pkg-config
 * Add tests
 * Remove/move notes
 * Clean up structure

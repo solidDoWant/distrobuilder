@@ -41,6 +41,7 @@ func getCommands() []*cli.Command {
 		NewXZCommand(),
 		NewLZ4Command(),
 		NewZstdCommand(),
+		NewBusyBoxCommand(),
 	}
 
 	commands := make([]*cli.Command, 0, len(builders))
@@ -151,5 +152,9 @@ func setValuesForInterfaceFlags(builder build.IBuilder, cliCtx *cli.Context) {
 
 	if rootFSBuilder, ok := builder.(build.IRootFSBuilder); ok {
 		rootFSBuilder.SetRootFSDirectoryPath(cliCtx.Path(rootFSDirectoryPathFlag.Name))
+	}
+
+	if kconfigBuilder, ok := builder.(build.IKconfigBuilder); ok {
+		kconfigBuilder.SetConfigFilePath(cliCtx.Path(configPathFlag.Name))
 	}
 }

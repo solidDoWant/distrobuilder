@@ -51,3 +51,11 @@ var rootFSDirectoryPathFlag = &cli.PathFlag{
 	Required: true,
 	Action:   flags.ExistingDirValidator,
 }
+
+var configPathFlag = &cli.PathFlag{
+	Name:     "config-file-path",
+	Usage:    "path to .config Kconfig file",
+	Aliases:  []string{"a"},
+	Required: true,
+	Action:   flags.ExistingFileValidator,
+}
