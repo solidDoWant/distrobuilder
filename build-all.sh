@@ -23,8 +23,7 @@ install() {
 }
 
 build_standard_builder() {
-    BUILDER_NAME="$1"
-    build "$BUILDER_NAME" --output-directory-path "/tmp/output/$BUILDER_NAME" --toolchain-directory-path "/tmp/output/cross-llvm" --root-fs-directory-path "$ROOTFS_PATH"
+    build "$@" --output-directory-path "/tmp/output/$BUILDER_NAME" --toolchain-directory-path "/tmp/output/cross-llvm" --root-fs-directory-path "$ROOTFS_PATH"
 }
 
 fhs() {
@@ -43,7 +42,7 @@ linux_headers() {
 
 standard_builder() {
     BUILDER_NAME="$1"
-    build_standard_builder "$BUILDER_NAME"
+    build_standard_builder "$@"
     package "$BUILDER_NAME"
     install "$BUILDER_NAME"
 }
@@ -56,3 +55,5 @@ standard_builder zlib-ng
 standard_builder xz
 standard_builder lz4
 standard_builder zstd
+standard_builder busybox --config-file-path ./assets/busybox/.config
+chroot "$ROOTFS_PATH" echo "chroot test"
