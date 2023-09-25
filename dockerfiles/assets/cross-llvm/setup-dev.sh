@@ -7,6 +7,9 @@ go install -v golang.org/x/tools/gopls@latest
 # Install Go debugger
 go install -v github.com/go-delve/delve/cmd/dlv@latest
 
+# Go interface stub implmeentert
+go install -v github.com/josharian/impl@latest
+
 # Install development specific packages and tools
 apt install -y zsh curl sudo ccache
 
