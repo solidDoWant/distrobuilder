@@ -151,12 +151,13 @@ func (sb *StandardBuilder) GNUConfigure(sourceDirectoryPath, buildDirectoryPath 
 				AdditionalArgs: map[string]args.IValue{
 					"--prefix": args.StringValue("/"), // Path is relative to DESTDIR, set when invoking make
 					"--srcdir": args.StringValue(sourceDirectoryPath),
-					"--host":   args.StringValue(sb.ToolchainRequiredBuilder.Triplet.String()),
 				},
 				AdditionalFlags: pie.Map(flags, func(flag string) args.IValue { return args.StringValue(flag) }),
 			},
 		},
 		ConfigurePath: path.Join(sourceDirectoryPath, "configure"),
+		HostTriplet:   sb.ToolchainRequiredBuilder.Triplet,
+		TargetTriplet: sb.ToolchainRequiredBuilder.Triplet,
 	})
 
 	if err != nil {
