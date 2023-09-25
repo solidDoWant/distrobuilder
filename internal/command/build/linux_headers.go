@@ -12,8 +12,9 @@ func (lh *LinuxHeadersCommand) GetCommand() *cli.Command {
 		Name: "linux-headers",
 		Flags: []cli.Flag{
 			gitRefFlag,
-			sourceDirectoryPathFlag,
 			outputDirectoryPathFlag,
+			sourceDirectoryPathFlag,
+			targetTripletFlag,
 		},
 	}
 }

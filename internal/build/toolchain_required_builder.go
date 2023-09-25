@@ -13,17 +13,15 @@ import (
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/runners"
 	"github.com/solidDoWant/distrobuilder/internal/runners/args"
-	"github.com/solidDoWant/distrobuilder/internal/utils"
 	"golang.org/x/exp/slices"
 )
 
 const compressionLibrary = "zstd"
 
 type IToolchainRequiredBuilder interface {
+	ITargetTripletBuilder
 	SetToolchainDirectory(string)
 	GetToolchainDirectory() string
-	SetTargetTriplet(*utils.Triplet)
-	GetTargetTriplet() *utils.Triplet
 }
 
 // TODO consider implementing some kind of validation interface for builders
@@ -32,20 +30,12 @@ type IToolchainRequiredBuilder interface {
 // library at some point.
 
 type ToolchainRequiredBuilder struct {
+	TargetTripletBuilder
 	ToolchainPath string
-	Triplet       *utils.Triplet
 }
 
 func (trb *ToolchainRequiredBuilder) SetToolchainDirectory(toolchainDirectory string) {
 	trb.ToolchainPath = toolchainDirectory
-}
-
-func (trb *ToolchainRequiredBuilder) SetTargetTriplet(triplet *utils.Triplet) {
-	trb.Triplet = triplet
-}
-
-func (trb *ToolchainRequiredBuilder) GetTargetTriplet() *utils.Triplet {
-	return trb.Triplet
 }
 
 func (trb *ToolchainRequiredBuilder) GetToolchainDirectory() string {

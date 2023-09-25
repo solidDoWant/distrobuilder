@@ -17,6 +17,7 @@ import (
 type LinuxHeaders struct {
 	SourceBuilder
 	FilesystemOutputBuilder
+	TargetTripletBuilder
 	GitRefBuilder
 
 	// Vars for validation checking
@@ -78,6 +79,7 @@ func (lh *LinuxHeaders) runLinuxMake(sourceDirectoryPath, buildDirectoryPath, bu
 		Path:    sourceDirectoryPath,
 		Targets: []string{buildTarget},
 		Variables: map[string]args.IValue{
+			"ARCH":             args.StringValue(lh.Triplet.Machine),
 			"INSTALL_HDR_PATH": args.StringValue(path.Join(lh.OutputDirectoryPath, "usr")),
 		},
 	})

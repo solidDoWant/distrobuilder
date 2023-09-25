@@ -139,11 +139,14 @@ func setValuesForInterfaceFlags(builder build.IBuilder, cliCtx *cli.Context) {
 		outputBuilder.SetOutputDirectoryPath(cliCtx.Path(outputDirectoryPathFlag.Name))
 	}
 
-	if toolchainBuilder, ok := builder.(build.IToolchainRequiredBuilder); ok {
-		toolchainBuilder.SetToolchainDirectory(cliCtx.Path(toolchainDirectoryPathFlag.Name))
+	if targetTripletBuilder, ok := builder.(build.ITargetTripletBuilder); ok {
 		// This is validated by the CLI parser so it is safe to throw away the error ret value here
 		triplet, _ := utils.ParseTriplet(cliCtx.String(targetTripletFlag.Name))
-		toolchainBuilder.SetTargetTriplet(triplet)
+		targetTripletBuilder.SetTargetTriplet(triplet)
+	}
+
+	if toolchainBuilder, ok := builder.(build.IToolchainRequiredBuilder); ok {
+		toolchainBuilder.SetToolchainDirectory(cliCtx.Path(toolchainDirectoryPathFlag.Name))
 	}
 
 	if gitRefBuilder, ok := builder.(build.IGitRefBuilder); ok {
