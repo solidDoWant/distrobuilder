@@ -48,7 +48,8 @@ func (rfsb *RootFSBuilder) GetGenericRunnerOptions() *runners.GenericRunnerOptio
 	return &runners.GenericRunnerOptions{
 		EnvironmentVariables: map[string]args.IValue{
 			// Path is set to so that pkg-config can find the libraries
-			"PKG_CONFIG_PATH": args.SeparatorValues(";", path.Join(rfsb.RootFSDirectoryPath, "usr", "lib", "pkgconfigs")),
+			"PKG_CONFIG_PATH":        args.SeparatorValues(";", path.Join(rfsb.RootFSDirectoryPath, "usr", "lib", "pkgconfig")),
+			"PKG_CONFIG_SYSROOT_DIR": args.StringValue(rfsb.RootFSDirectoryPath),
 		},
 	}
 }
