@@ -108,11 +108,15 @@ func (sb *StandardBuilder) getGenericRunner(workingDirectory string) runners.Gen
 	}
 }
 
-func (sb *StandardBuilder) CMakeConfigureOnly(buildDirectoryPath, cmakeSubpath string, options ...*runners.CMakeOptions) error {
+func (sb *StandardBuilder) CMakeConfigure(buildDirectoryPath string, options ...*runners.CMakeOptions) error {
+	return trace.Wrap(sb.CMakeConfigureWithPath(buildDirectoryPath, sb.SourceDirectoryPath, options...))
+}
+
+func (sb *StandardBuilder) CMakeConfigureWithPath(buildDirectoryPath, cmakePath string, options ...*runners.CMakeOptions) error {
 	_, err := runners.Run(&runners.CMake{
 		GenericRunner: sb.getGenericRunner(buildDirectoryPath),
 		Generator:     "Ninja",
-		Path:          path.Join(sb.SourceDirectoryPath, cmakeSubpath),
+		Path:          cmakePath,
 		Options: append(
 			[]*runners.CMakeOptions{
 				sb.FilesystemOutputBuilder.GetCMakeOptions("usr"),
@@ -125,20 +129,6 @@ func (sb *StandardBuilder) CMakeConfigureOnly(buildDirectoryPath, cmakeSubpath s
 
 	if err != nil {
 		return trace.Wrap(err, "failed to create generator file for %s", sb.Name)
-	}
-
-	return nil
-}
-
-func (sb *StandardBuilder) CMakeConfigure(buildDirectoryPath, cmakeSubpath string, options ...*runners.CMakeOptions) error {
-	err := sb.CMakeConfigureOnly(buildDirectoryPath, cmakeSubpath, options...)
-	if err != nil {
-		return trace.Wrap(err, "failed to run CMake for %s", sb.Name)
-	}
-
-	err = updatePkgconfigsPrefixes(buildDirectoryPath)
-	if err != nil {
-		return trace.Wrap(err, "failed to update pkgconfig prefix for %q", sb.Name)
 	}
 
 	return nil
@@ -170,8 +160,11 @@ func (sb *StandardBuilder) GNUConfigure(buildDirectoryPath string, flags ...stri
 	return nil
 }
 
-func updatePkgconfigsPrefixes(buildDirectoryPath string) error {
-	err := filepath.WalkDir(buildDirectoryPath, func(fsPath string, fsEntry fs.DirEntry, err error) error {
+// Searches for /<build directory path>/**/pkgconfig/**/*.pc files and updates the included paths to be relative
+// to the root directory.
+// For example, `prefix=/tmp/output/package/usr` will be rewritten as `prefix=/usr`.
+func (sb *StandardBuilder) UpdatePkgconfigsPrefixes(searchDirectoryPath string) error {
+	err := filepath.WalkDir(searchDirectoryPath, func(fsPath string, fsEntry fs.DirEntry, err error) error {
 		if err != nil {
 			return trace.Wrap(err, "failed to walk dir %q", fsPath)
 		}
@@ -181,10 +174,10 @@ func updatePkgconfigsPrefixes(buildDirectoryPath string) error {
 			return nil
 		}
 
-		buildDirectoryRelativePath, err := filepath.Rel(buildDirectoryPath, fsPath)
+		buildDirectoryRelativePath, err := filepath.Rel(searchDirectoryPath, fsPath)
 		if err != nil {
 			// This should normally only be hit if there is a bug
-			return trace.Wrap(err, "failed to get path %q relative to the build directory path %q", fsPath, buildDirectoryPath)
+			return trace.Wrap(err, "failed to get path %q relative to the build directory path %q", fsPath, searchDirectoryPath)
 		}
 
 		if !slices.Contains(strings.Split(buildDirectoryRelativePath, string(filepath.Separator)), "pkgconfig") {
@@ -207,7 +200,7 @@ func updatePkgconfigsPrefixes(buildDirectoryPath string) error {
 	})
 
 	if err != nil {
-		return trace.Wrap(err, "failed to walk over and fix all pkgconfig files in %q", buildDirectoryPath)
+		return trace.Wrap(err, "failed to walk over and fix all pkgconfig files in %q", searchDirectoryPath)
 	}
 
 	return nil
@@ -260,6 +253,11 @@ func (sb *StandardBuilder) NinjaBuild(buildDirectoryPath string, buildTargets ..
 	})
 	if err != nil {
 		return trace.Wrap(err, "failed to build %s", sb.Name)
+	}
+
+	err = sb.UpdatePkgconfigsPrefixes(sb.OutputDirectoryPath)
+	if err != nil {
+		return trace.Wrap(err, "failed to update pkgconfig prefixes")
 	}
 
 	return nil

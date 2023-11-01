@@ -46,7 +46,7 @@ func (z *Zstd) DoConfiguration(buildDirectoryPath string) error {
 			"ZSTD_LZ4_SUPPORT":          args.OnValue(),
 		},
 	}
-	return z.CMakeConfigure(buildDirectoryPath, path.Join("build", "cmake"), cmakeOptions)
+	return z.CMakeConfigureWithPath(buildDirectoryPath, path.Join(z.SourceDirectoryPath, "build", "cmake"), cmakeOptions)
 }
 
 func (z *Zstd) DoBuild(buildDirectoryPath string) error {

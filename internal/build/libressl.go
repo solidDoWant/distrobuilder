@@ -60,7 +60,7 @@ func (lssl *LibreSSL) DoConfiguration(buildDirectoryPath string) error {
 	}
 	// Source and build directory are the same as it's being built in tree, copied to the build
 	// directory with autogen ran
-	return lssl.CMakeConfigure(cmakeBuildDirectory, "", cmakeOptions)
+	return lssl.CMakeConfigureWithPath(cmakeBuildDirectory, buildDirectoryPath, cmakeOptions)
 }
 
 func (lssl *LibreSSL) DoBuild(buildDirectoryPath string) error {

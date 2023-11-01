@@ -40,7 +40,7 @@ func (lz4 *LZ4) DoConfiguration(buildDirectoryPath string) error {
 			"BUILD_STATIC_LIBS": args.OnValue(),
 		},
 	}
-	return lz4.CMakeConfigure(buildDirectoryPath, path.Join("build", "cmake"), cmakeOptions)
+	return lz4.CMakeConfigureWithPath(buildDirectoryPath, path.Join(lz4.SourceDirectoryPath, "build", "cmake"), cmakeOptions)
 }
 
 func (lz4 *LZ4) DoBuild(buildDirectoryPath string) error {

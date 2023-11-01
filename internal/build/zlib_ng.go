@@ -40,7 +40,7 @@ func (zng *ZlibNg) DoConfiguration(buildDirectoryPath string) error {
 			"INSTALL_UTILS": args.OnValue(),
 		},
 	}
-	return zng.CMakeConfigure(buildDirectoryPath, "", cmakeOptions)
+	return zng.CMakeConfigure(buildDirectoryPath, cmakeOptions)
 }
 
 func (zng *ZlibNg) DoBuild(buildDirectoryPath string) error {
