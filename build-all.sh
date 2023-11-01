@@ -55,5 +55,7 @@ standard_builder zlib-ng
 standard_builder xz
 standard_builder lz4
 standard_builder zstd
+standard_builder libressl
 standard_builder busybox --config-file-path ./assets/busybox/.config
+standard_builder linux-kernel --config-file-path ./assets/linux-kernel/.config
 chroot "$ROOTFS_PATH" echo "chroot test"

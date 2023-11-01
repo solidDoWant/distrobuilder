@@ -33,7 +33,7 @@ func (z *Zstd) GetGitRepo(repoDirectoryPath string, ref string) *source.GitRepo 
 	return git_source.NewZstdGitRepo(repoDirectoryPath, ref)
 }
 
-func (z *Zstd) DoConfiguration(sourceDirectoryPath string, buildDirectoryPath string) error {
+func (z *Zstd) DoConfiguration(buildDirectoryPath string) error {
 	cmakeOptions := &runners.CMakeOptions{
 		Defines: map[string]args.IValue{
 			"ZSTD_MULTITHREAD_SUPPORT":  args.OnValue(),
@@ -46,7 +46,7 @@ func (z *Zstd) DoConfiguration(sourceDirectoryPath string, buildDirectoryPath st
 			"ZSTD_LZ4_SUPPORT":          args.OnValue(),
 		},
 	}
-	return z.CMakeConfigureFixPkgconfigPrefix(sourceDirectoryPath, buildDirectoryPath, path.Join("lib", "libzstd.pc"), path.Join("build", "cmake"), cmakeOptions)
+	return z.CMakeConfigure(buildDirectoryPath, path.Join("build", "cmake"), cmakeOptions)
 }
 
 func (z *Zstd) DoBuild(buildDirectoryPath string) error {

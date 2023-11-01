@@ -33,14 +33,14 @@ func (lz4 *LZ4) GetGitRepo(repoDirectoryPath, ref string) *source.GitRepo {
 	return git_source.NewLZ4GitRepo(repoDirectoryPath, ref)
 }
 
-func (lz4 *LZ4) DoConfiguration(sourceDirectoryPath string, buildDirectoryPath string) error {
+func (lz4 *LZ4) DoConfiguration(buildDirectoryPath string) error {
 	cmakeOptions := &runners.CMakeOptions{
 		Defines: map[string]args.IValue{
 			"BUILD_SHARED_LIBS": args.OnValue(),
 			"BUILD_STATIC_LIBS": args.OnValue(),
 		},
 	}
-	return lz4.CMakeConfigureFixPkgconfigPrefix(sourceDirectoryPath, buildDirectoryPath, "liblz4.pc", path.Join("build", "cmake"), cmakeOptions)
+	return lz4.CMakeConfigure(buildDirectoryPath, path.Join("build", "cmake"), cmakeOptions)
 }
 
 func (lz4 *LZ4) DoBuild(buildDirectoryPath string) error {

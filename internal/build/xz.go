@@ -39,7 +39,8 @@ func (xz *XZ) GetGitRepo(repoDirectoryPath, ref string) *source.GitRepo {
 	return git_source.NewXZGitRepo(repoDirectoryPath, ref)
 }
 
-func (xz *XZ) DoConfiguration(sourceDirectoryPath, buildDirectoryPath string) error {
+func (xz *XZ) DoConfiguration(buildDirectoryPath string) error {
+	// TODO this isn't great design, rework it
 	panic("not implemented") // This is not needed because Build is overriden
 }
 
@@ -61,7 +62,7 @@ func (xz *XZ) Build(ctx context.Context) error {
 	}
 	xz.OutputDirectoryPath = outputDirectory.Path
 
-	err = xz.runAutogen(sourcePath, buildDirectory.Path)
+	err = xz.Autogen(buildDirectory.Path)
 	if err != nil {
 		return trace.Wrap(err, "failed to run autogen for %s build", xz.Name)
 	}
@@ -98,7 +99,7 @@ func (xz *XZ) buildStage1(sourceDirectoryPath, outputDirectoryPath string) error
 		return trace.Wrap(err, "failed to execute configure in build directory %q", buildDirectory)
 	}
 
-	err = xz.MakeBuild(buildDirectory.Path, xz.getMakeVars(), "all", "install-strip")
+	err = xz.MakeBuild(buildDirectory.Path, xz.getMakeOptions(), "all", "install-strip")
 	if err != nil {
 		return trace.Wrap(err, "failed to execute makefile targets")
 	}
@@ -123,13 +124,13 @@ func (xz *XZ) buildStage2(sourceDirectoryPath, outputDirectoryPath string) error
 		return trace.Wrap(err, "failed to execute configure in build directory %q", buildDirectory)
 	}
 
-	makeVars := xz.getMakeVars()
-	err = xz.MakeBuild(path.Join(buildDirectory.Path, "src", "liblzma"), makeVars, "all")
+	makeOptions := xz.getMakeOptions()
+	err = xz.MakeBuild(path.Join(buildDirectory.Path, "src", "liblzma"), makeOptions, "all")
 	if err != nil {
 		return trace.Wrap(err, "failed to build static liblzma")
 	}
 
-	err = xz.MakeBuild(path.Join(buildDirectory.Path, "src", "xzdec"), makeVars, "all", "install-strip")
+	err = xz.MakeBuild(path.Join(buildDirectory.Path, "src", "xzdec"), makeOptions, "all", "install-strip")
 	if err != nil {
 		return trace.Wrap(err, "failed to build static xzdec")
 	}
@@ -147,28 +148,12 @@ func (xz *XZ) configureStage2(sourceDirectoryPath, buildDirectoryPath string) er
 		"--disable-shared", "--disable-nls", "--disable-encoders", "--disable-threads")
 }
 
-func (xz *XZ) runAutogen(sourceDirectoryPath, buildDirectoryPath string) error {
-	// Autogen is somewhat strange and does not support generating files in
-	// a separate build directory. To prevent contaminating the source folder,
-	// the source contents are first copied to the build directory.
-	// Somehow Go does not have a builtin library for copying directories, so
-	// use this third party one that should cover most corner cases.
-	err := xz.CopyToBuildDirectory(sourceDirectoryPath, buildDirectoryPath)
-	if err != nil {
-		return trace.Wrap(err, "failed to copy source directory %q to build directory %q", sourceDirectoryPath, buildDirectoryPath)
+func (xz *XZ) getMakeOptions() []*runners.MakeOptions {
+	return []*runners.MakeOptions{
+		{
+			Variables: map[string]args.IValue{
+				"DESTDIR": args.StringValue(path.Join(xz.OutputDirectoryPath, "usr")),
+			},
+		},
 	}
-
-	_, err = runners.Run(&runners.CommandRunner{
-		GenericRunner: xz.getGenericRunner(buildDirectoryPath),
-		Command:       path.Join(buildDirectoryPath, "autogen.sh"),
-	})
-	if err != nil {
-		return trace.Wrap(err, "command autogen.sh failed in build directory %q", buildDirectoryPath)
-	}
-
-	return nil
-}
-
-func (xz *XZ) getMakeVars() map[string]args.IValue {
-	return map[string]args.IValue{"DESTDIR": args.StringValue(path.Join(xz.OutputDirectoryPath, "usr"))}
 }

@@ -429,6 +429,106 @@
         "-D",
         "/tmp/root-filesystem"
       ]
+    },
+    {
+      "name": "Launch build libressl",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "build",
+        "libressl",
+        "--output-directory-path",
+        "/tmp/output/libressl",
+        "--toolchain-directory-path",
+        "/tmp/output/cross-llvm",
+        "--root-fs-directory-path",
+        "/tmp/root-filesystem"
+      ]
+    },
+    {
+      "name": "Launch package libressl",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "package",
+        "tarball",
+        "-c",
+        "--build-output-path",
+        "/tmp/output/libressl",
+        "--output-file-path",
+        "/tmp/package/libressl.tar.gz"
+      ]
+    },
+    {
+      "name": "Launch install libressl",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "install",
+        "tarball",
+        "-c",
+        "-s",
+        "/tmp/package/libressl.tar.gz",
+        "-D",
+        "/tmp/root-filesystem"
+      ]
+    },
+    {
+      "name": "Launch build linux-kernel",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "build",
+        "linux-kernel",
+        "--output-directory-path",
+        "/tmp/output/linux-kernel",
+        "--toolchain-directory-path",
+        "/tmp/output/cross-llvm",
+        "--root-fs-directory-path",
+        "/tmp/root-filesystem",
+        "--config-file-path",
+        "${workspaceFolder}/assets/linux-kernel/.config"
+      ]
+    },
+    {
+      "name": "Launch package linux-kernel",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "package",
+        "tarball",
+        "-c",
+        "--build-output-path",
+        "/tmp/output/linux-kernel",
+        "--output-file-path",
+        "/tmp/package/linux-kernel.tar.gz"
+      ]
+    },
+    {
+      "name": "Launch install linux-kernel",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "install",
+        "tarball",
+        "-c",
+        "-s",
+        "/tmp/package/linux-kernel.tar.gz",
+        "-D",
+        "/tmp/root-filesystem"
+      ]
     }
   ]
 }

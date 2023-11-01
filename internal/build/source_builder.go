@@ -32,8 +32,8 @@ func (sb *SourceBuilder) GetSourceDirectoryPath() string {
 }
 
 // TODO rework this so that sb.SourceDirectoryPath is updated d uring the build process
-func (sb *SourceBuilder) CopyToBuildDirectory(sourceDirectoryPath, buildDirectoryPath string) error {
-	err := cp.Copy(sourceDirectoryPath, buildDirectoryPath, cp.Options{
+func (sb *SourceBuilder) CopyToBuildDirectory(buildDirectoryPath string) error {
+	err := cp.Copy(sb.SourceDirectoryPath, buildDirectoryPath, cp.Options{
 		// Skip copying ".git*" files, such as the ".git" directory and ".gitignore"
 		Skip: func(srcInfo os.FileInfo, src, dest string) (bool, error) {
 			return strings.HasPrefix(srcInfo.Name(), ".git"), nil

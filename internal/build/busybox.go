@@ -5,6 +5,7 @@ import (
 	"path"
 
 	"github.com/gravitational/trace"
+	"github.com/solidDoWant/distrobuilder/internal/runners"
 	"github.com/solidDoWant/distrobuilder/internal/runners/args"
 	"github.com/solidDoWant/distrobuilder/internal/source"
 	git_source "github.com/solidDoWant/distrobuilder/internal/source/git"
@@ -21,8 +22,6 @@ func NewBusyBox() *BusyBox {
 		StandardBuilder: StandardBuilder{
 			Name: "busybox",
 			BinariesToCheck: []string{
-				// path.Join("usr", "lib", "libz.so"),
-				// path.Join("usr", "bin", "minigzip"),
 				path.Join("bin", "busybox"),
 			},
 		},
@@ -36,12 +35,12 @@ func (bb *BusyBox) GetGitRepo(repoDirectoryPath string, ref string) *source.GitR
 	return git_source.NewBusyBoxGitRepo(repoDirectoryPath, ref)
 }
 
-func (bb *BusyBox) DoConfiguration(sourceDirectoryPath string, buildDirectoryPath string) error {
+func (bb *BusyBox) DoConfiguration(buildDirectoryPath string) error {
 	// Copy the source to the build directory. Building out of tree is exceedingly difficult,
 	// so build in tree in the build directory.
-	err := bb.CopyToBuildDirectory(sourceDirectoryPath, buildDirectoryPath)
+	err := bb.CopyToBuildDirectory(buildDirectoryPath)
 	if err != nil {
-		return trace.Wrap(err, "failed to copy source directory %q to build directory %q", sourceDirectoryPath, buildDirectoryPath)
+		return trace.Wrap(err, "failed to copy source directory %q to build directory %q", bb.SourceDirectoryPath, buildDirectoryPath)
 	}
 
 	// BusyBox should use the same values as a ./configure script, but the
@@ -65,25 +64,36 @@ func (bb *BusyBox) DoConfiguration(sourceDirectoryPath string, buildDirectoryPat
 }
 
 func (bb *BusyBox) DoBuild(buildDirectoryPath string) error {
-	clangPath, clangxxPath, pkgConfigPath, err := getUtilityPaths()
+	makeOptions, err := bb.getMakeOptions()
 	if err != nil {
-		return trace.Wrap(err, "failed to get clang C and C++ compiler paths")
+		return trace.Wrap(err, "failed to build make options")
 	}
 
-	makeVars := map[string]args.IValue{
-		"CC":         args.StringValue(bb.GetPathForTool("clang")),
-		"CXX":        args.StringValue(bb.GetPathForTool("clang++")),
-		"HOSTCC":     args.StringValue(clangPath),
-		"HOSTCXX":    args.StringValue(clangxxPath),
-		"PKG_CONFIG": args.StringValue(pkgConfigPath),
-	}
-
-	err = bb.MakeBuild(buildDirectoryPath, makeVars, "all", "install")
+	err = bb.MakeBuild(buildDirectoryPath, makeOptions, "all", "install")
 	if err != nil {
 		return trace.Wrap(err, "failed to build and install %s", bb.Name)
 	}
 
 	return nil
+}
+
+func (bb *BusyBox) getMakeOptions() ([]*runners.MakeOptions, error) {
+	clangPath, clangxxPath, pkgConfigPath, err := getUtilityPaths()
+	if err != nil {
+		return nil, trace.Wrap(err, "failed to get clang C and C++ compiler paths")
+	}
+
+	return []*runners.MakeOptions{
+		{
+			Variables: map[string]args.IValue{
+				"CC":         args.StringValue(bb.GetPathForTool("clang")),
+				"CXX":        args.StringValue(bb.GetPathForTool("clang++")),
+				"HOSTCC":     args.StringValue(clangPath),
+				"HOSTCXX":    args.StringValue(clangxxPath),
+				"PKG_CONFIG": args.StringValue(pkgConfigPath),
+			},
+		},
+	}, nil
 }
 
 func getUtilityPaths() (string, string, string, error) {

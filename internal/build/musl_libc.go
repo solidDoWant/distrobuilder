@@ -41,14 +41,14 @@ func (ml *MuslLibc) GetGitRepo(repoDirectoryPath, ref string) *source.GitRepo {
 	return git_source.NewMuslGitRepo(repoDirectoryPath, ref)
 }
 
-func (ml *MuslLibc) DoConfiguration(sourceDirectoryPath, buildDirectoryPath string) error {
-	err := ml.GNUConfigure(sourceDirectoryPath, buildDirectoryPath)
+func (ml *MuslLibc) DoConfiguration(buildDirectoryPath string) error {
+	err := ml.GNUConfigure(buildDirectoryPath)
 	if err != nil {
 		return trace.Wrap(err, "failed to build %s", ml.Name)
 	}
 
 	// Record values for build verification
-	versionFilePath := path.Join(sourceDirectoryPath, "VERSION")
+	versionFilePath := path.Join(ml.SourceDirectoryPath, "VERSION")
 	fileContents, err := os.ReadFile(versionFilePath)
 	if err != nil {
 		return trace.Wrap(err, "failed to read VERSION file at %q", versionFilePath)
@@ -59,7 +59,17 @@ func (ml *MuslLibc) DoConfiguration(sourceDirectoryPath, buildDirectoryPath stri
 }
 
 func (ml *MuslLibc) DoBuild(buildDirectoryPath string) error {
-	return ml.MakeBuild(buildDirectoryPath, map[string]args.IValue{"DESTDIR": args.StringValue(path.Join(ml.OutputDirectoryPath, "usr"))}, "install")
+	return ml.MakeBuild(buildDirectoryPath, ml.getMakeOptions(), "install")
+}
+
+func (ml *MuslLibc) getMakeOptions() []*runners.MakeOptions {
+	return []*runners.MakeOptions{
+		{
+			Variables: map[string]args.IValue{
+				"DESTDIR": args.StringValue(path.Join(ml.OutputDirectoryPath, "usr")),
+			},
+		},
+	}
 }
 
 func (ml *MuslLibc) VerifyBuild(ctx context.Context) error {

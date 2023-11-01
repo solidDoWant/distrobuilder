@@ -33,14 +33,14 @@ func (zng *ZlibNg) GetGitRepo(repoDirectoryPath string, ref string) *source.GitR
 	return git_source.NewZlibNgGitRepo(repoDirectoryPath, ref)
 }
 
-func (zng *ZlibNg) DoConfiguration(sourceDirectoryPath string, buildDirectoryPath string) error {
+func (zng *ZlibNg) DoConfiguration(buildDirectoryPath string) error {
 	cmakeOptions := &runners.CMakeOptions{
 		Defines: map[string]args.IValue{
 			"ZLIB_COMPAT":   args.OnValue(),
 			"INSTALL_UTILS": args.OnValue(),
 		},
 	}
-	return zng.CMakeConfigureFixPkgconfigPrefix(sourceDirectoryPath, buildDirectoryPath, "zlib.pc", "", cmakeOptions)
+	return zng.CMakeConfigure(buildDirectoryPath, "", cmakeOptions)
 }
 
 func (zng *ZlibNg) DoBuild(buildDirectoryPath string) error {

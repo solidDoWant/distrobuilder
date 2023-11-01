@@ -43,7 +43,11 @@ func (trb *ToolchainRequiredBuilder) GetToolchainDirectory() string {
 }
 
 func (trb *ToolchainRequiredBuilder) GetPathForTool(tool string) string {
-	return path.Join(trb.ToolchainPath, "usr", "bin", tool)
+	return path.Join(trb.GetToolchainBinDirectory(), tool)
+}
+
+func (trb *ToolchainRequiredBuilder) GetToolchainBinDirectory() string {
+	return path.Join(trb.ToolchainPath, "usr", "bin")
 }
 
 func (trb *ToolchainRequiredBuilder) GetCMakeOptions() *runners.CMakeOptions {

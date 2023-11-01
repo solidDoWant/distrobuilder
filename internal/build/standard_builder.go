@@ -3,9 +3,12 @@ package build
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path"
+	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/elliotchance/pie/v2"
@@ -18,7 +21,7 @@ import (
 
 type IStandardBuilder interface {
 	GetGitRepo(repoDirectoryPath, ref string) *source.GitRepo
-	DoConfiguration(sourceDirectoryPath, buildDirectoryPath string) error
+	DoConfiguration(buildDirectoryPath string) error
 	DoBuild(buildDirectoryPath string) error
 }
 
@@ -51,13 +54,13 @@ func (sb *StandardBuilder) CheckHostRequirements() error {
 }
 
 func (sb *StandardBuilder) Build(ctx context.Context) error {
-	sourcePath, buildDirectory, err := sb.Setup(ctx)
+	buildDirectory, err := sb.Setup(ctx)
 	defer utils.Close(buildDirectory, &err)
 	if err != nil {
 		return trace.Wrap(err, "failed to setup builder")
 	}
 
-	err = sb.DoConfiguration(sourcePath, buildDirectory.Path)
+	err = sb.DoConfiguration(buildDirectory.Path)
 	if err != nil {
 		return trace.Wrap(err, "failed to configure %s", sb.Name)
 	}
@@ -70,18 +73,18 @@ func (sb *StandardBuilder) Build(ctx context.Context) error {
 	return nil
 }
 
-func (sb *StandardBuilder) Setup(ctx context.Context) (string, *utils.Directory, error) {
+func (sb *StandardBuilder) Setup(ctx context.Context) (*utils.Directory, error) {
 	slog.Info(fmt.Sprintf("Starting %s build", sb.Name))
 	repo := sb.GetGitRepo(sb.SourceDirectoryPath, sb.GitRef)
-	sourcePath := repo.FullDownloadPath()
+	sb.SourceDirectoryPath = repo.FullDownloadPath()
 
 	buildDirectory, outputDirectory, err := setupForBuild(ctx, repo, sb.OutputDirectoryPath)
 	if err != nil {
-		return "", nil, trace.Wrap(err, "failed to setup for %s build", sb.Name)
+		return nil, trace.Wrap(err, "failed to setup for %s build", sb.Name)
 	}
 	sb.OutputDirectoryPath = outputDirectory.Path
 
-	return sourcePath, buildDirectory, nil
+	return buildDirectory, nil
 }
 
 func (sb *StandardBuilder) VerifyBuild(ctx context.Context) error {
@@ -105,11 +108,11 @@ func (sb *StandardBuilder) getGenericRunner(workingDirectory string) runners.Gen
 	}
 }
 
-func (sb *StandardBuilder) CMakeConfigure(sourceDirectoryPath, buildDirectoryPath, cmakeSubpath string, options ...*runners.CMakeOptions) error {
+func (sb *StandardBuilder) CMakeConfigureOnly(buildDirectoryPath, cmakeSubpath string, options ...*runners.CMakeOptions) error {
 	_, err := runners.Run(&runners.CMake{
 		GenericRunner: sb.getGenericRunner(buildDirectoryPath),
 		Generator:     "Ninja",
-		Path:          path.Join(sourceDirectoryPath, cmakeSubpath),
+		Path:          path.Join(sb.SourceDirectoryPath, cmakeSubpath),
 		Options: append(
 			[]*runners.CMakeOptions{
 				sb.FilesystemOutputBuilder.GetCMakeOptions("usr"),
@@ -127,13 +130,13 @@ func (sb *StandardBuilder) CMakeConfigure(sourceDirectoryPath, buildDirectoryPat
 	return nil
 }
 
-func (sb *StandardBuilder) CMakeConfigureFixPkgconfigPrefix(sourceDirectoryPath, buildDirectoryPath, pkgconfigSubpath, cmakeSubpath string, options ...*runners.CMakeOptions) error {
-	err := sb.CMakeConfigure(sourceDirectoryPath, buildDirectoryPath, cmakeSubpath, options...)
+func (sb *StandardBuilder) CMakeConfigure(buildDirectoryPath, cmakeSubpath string, options ...*runners.CMakeOptions) error {
+	err := sb.CMakeConfigureOnly(buildDirectoryPath, cmakeSubpath, options...)
 	if err != nil {
 		return trace.Wrap(err, "failed to run CMake for %s", sb.Name)
 	}
 
-	err = updatePkgconfigPrefix(path.Join(buildDirectoryPath, pkgconfigSubpath))
+	err = updatePkgconfigsPrefixes(buildDirectoryPath)
 	if err != nil {
 		return trace.Wrap(err, "failed to update pkgconfig prefix for %q", sb.Name)
 	}
@@ -141,7 +144,7 @@ func (sb *StandardBuilder) CMakeConfigureFixPkgconfigPrefix(sourceDirectoryPath,
 	return nil
 }
 
-func (sb *StandardBuilder) GNUConfigure(sourceDirectoryPath, buildDirectoryPath string, flags ...string) error {
+func (sb *StandardBuilder) GNUConfigure(buildDirectoryPath string, flags ...string) error {
 	_, err := runners.Run(&runners.Configure{
 		GenericRunner: sb.getGenericRunner(buildDirectoryPath),
 		Options: []*runners.ConfigureOptions{
@@ -150,18 +153,61 @@ func (sb *StandardBuilder) GNUConfigure(sourceDirectoryPath, buildDirectoryPath 
 			{
 				AdditionalArgs: map[string]args.IValue{
 					"--prefix": args.StringValue("/"), // Path is relative to DESTDIR, set when invoking make
-					"--srcdir": args.StringValue(sourceDirectoryPath),
+					"--srcdir": args.StringValue(sb.SourceDirectoryPath),
 				},
 				AdditionalFlags: pie.Map(flags, func(flag string) args.IValue { return args.StringValue(flag) }),
 			},
 		},
-		ConfigurePath: path.Join(sourceDirectoryPath, "configure"),
+		ConfigurePath: path.Join(sb.SourceDirectoryPath, "configure"),
 		HostTriplet:   sb.ToolchainRequiredBuilder.Triplet,
 		TargetTriplet: sb.ToolchainRequiredBuilder.Triplet,
 	})
 
 	if err != nil {
 		return trace.Wrap(err, "failed to run configure script for %s", sb.Name)
+	}
+
+	return nil
+}
+
+func updatePkgconfigsPrefixes(buildDirectoryPath string) error {
+	err := filepath.WalkDir(buildDirectoryPath, func(fsPath string, fsEntry fs.DirEntry, err error) error {
+		if err != nil {
+			return trace.Wrap(err, "failed to walk dir %q", fsPath)
+		}
+
+		// Skip directories
+		if fsEntry.IsDir() {
+			return nil
+		}
+
+		buildDirectoryRelativePath, err := filepath.Rel(buildDirectoryPath, fsPath)
+		if err != nil {
+			// This should normally only be hit if there is a bug
+			return trace.Wrap(err, "failed to get path %q relative to the build directory path %q", fsPath, buildDirectoryPath)
+		}
+
+		if !slices.Contains(strings.Split(buildDirectoryRelativePath, string(filepath.Separator)), "pkgconfig") {
+			return nil
+		}
+
+		if filepath.Ext(fsPath) != ".pc" {
+			return nil
+		}
+
+		slog.Info("Updating pkgconfig prefixes", "path", buildDirectoryRelativePath)
+
+		// At this point the file must be a pkgconfig file
+		err = updatePkgconfigPrefix(fsPath)
+		if err != nil {
+			return trace.Wrap(err, "failed to update package config prefixes for %q", fsPath)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return trace.Wrap(err, "failed to walk over and fix all pkgconfig files in %q", buildDirectoryPath)
 	}
 
 	return nil
@@ -219,18 +265,41 @@ func (sb *StandardBuilder) NinjaBuild(buildDirectoryPath string, buildTargets ..
 	return nil
 }
 
-func (sb *StandardBuilder) MakeBuild(makefileDirectoryPath string, makeVars map[string]args.IValue, targets ...string) error {
+// Produces a built via Make using the provided confiruation. Targets are run in series, not in parallel.
+func (sb *StandardBuilder) MakeBuild(makefileDirectoryPath string, makeOptions []*runners.MakeOptions, targets ...string) error {
 	for _, target := range targets {
 		_, err := runners.Run(&runners.Make{
 			GenericRunner: sb.getGenericRunner(makefileDirectoryPath),
 			Path:          ".",
 			Targets:       []string{target},
-			Variables:     makeVars,
+			Options:       makeOptions,
 		})
 
 		if err != nil {
 			return trace.Wrap(err, "%s make build failed for target %q", sb.Name, target)
 		}
+	}
+
+	return nil
+}
+
+func (sb *StandardBuilder) Autogen(buildDirectoryPath string) error {
+	// Autogen is somewhat strange and does not support generating files in
+	// a separate build directory. To prevent contaminating the source folder,
+	// the source contents are first copied to the build directory.
+	// Somehow Go does not have a builtin library for copying directories, so
+	// use this third party one that should cover most corner cases.
+	err := sb.CopyToBuildDirectory(buildDirectoryPath)
+	if err != nil {
+		return trace.Wrap(err, "failed to copy source directory %q to build directory %q", sb.SourceDirectoryPath, buildDirectoryPath)
+	}
+
+	_, err = runners.Run(&runners.CommandRunner{
+		GenericRunner: sb.getGenericRunner(buildDirectoryPath),
+		Command:       path.Join(buildDirectoryPath, "autogen.sh"),
+	})
+	if err != nil {
+		return trace.Wrap(err, "command autogen.sh failed in build directory %q", buildDirectoryPath)
 	}
 
 	return nil

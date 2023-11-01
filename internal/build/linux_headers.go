@@ -78,9 +78,13 @@ func (lh *LinuxHeaders) runLinuxMake(sourceDirectoryPath, buildDirectoryPath, bu
 		},
 		Path:    sourceDirectoryPath,
 		Targets: []string{buildTarget},
-		Variables: map[string]args.IValue{
-			"ARCH":             args.StringValue(lh.Triplet.Machine),
-			"INSTALL_HDR_PATH": args.StringValue(path.Join(lh.OutputDirectoryPath, "usr")),
+		Options: []*runners.MakeOptions{
+			{
+				Variables: map[string]args.IValue{
+					"ARCH":             args.StringValue(lh.Triplet.Machine),
+					"INSTALL_HDR_PATH": args.StringValue(path.Join(lh.OutputDirectoryPath, "usr")),
+				},
+			},
 		},
 	})
 
