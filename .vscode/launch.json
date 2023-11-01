@@ -529,6 +529,55 @@
         "-D",
         "/tmp/root-filesystem"
       ]
+    },
+    {
+      "name": "Launch build freetype",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "build",
+        "freetype",
+        "--output-directory-path",
+        "/tmp/output/freetype",
+        "--toolchain-directory-path",
+        "/tmp/output/cross-llvm",
+        "--root-fs-directory-path",
+        "/tmp/root-filesystem"
+      ]
+    },
+    {
+      "name": "Launch package freetype",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "package",
+        "tarball",
+        "-c",
+        "--build-output-path",
+        "/tmp/output/freetype",
+        "--output-file-path",
+        "/tmp/package/freetype.tar.gz"
+      ]
+    },
+    {
+      "name": "Launch install freetype",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "install",
+        "tarball",
+        "-c",
+        "-s",
+        "/tmp/package/freetype.tar.gz",
+        "-D",
+        "/tmp/root-filesystem"
+      ]
     }
   ]
 }

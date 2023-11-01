@@ -44,6 +44,7 @@ func getCommands() []*cli.Command {
 		NewBusyBoxCommand(),
 		NewLibreSSLCommand(),
 		NewLinuxKernelCommand(),
+		NewFreeTypeCommand(),
 	}
 
 	commands := make([]*cli.Command, 0, len(builders))

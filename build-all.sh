@@ -48,6 +48,8 @@ standard_builder() {
 }
 
 rm -rf "$ROOTFS_PATH"
+
+# Kernel packages
 fhs
 linux_headers
 standard_builder musl-libc
@@ -59,3 +61,6 @@ standard_builder libressl
 standard_builder busybox --config-file-path ./assets/busybox/.config
 standard_builder linux-kernel --config-file-path ./assets/linux-kernel/.config
 chroot "$ROOTFS_PATH" echo "chroot test"
+
+# GRUB/bootloader packages
+standard_builder freetype
