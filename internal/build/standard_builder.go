@@ -135,6 +135,49 @@ func (sb *StandardBuilder) CMakeConfigureWithPath(buildDirectoryPath, cmakePath 
 }
 
 func (sb *StandardBuilder) GNUConfigure(buildDirectoryPath string, flags ...string) error {
+	err := sb.gnuConfigure(buildDirectoryPath, sb.SourceDirectoryPath)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	return nil
+}
+
+func (sb *StandardBuilder) AutogenConfigure(buildDirectoryPath string, flags ...string) error {
+	err := sb.Autogen(buildDirectoryPath)
+	if err != nil {
+		return trace.Wrap(err, "failed to run autogen for %s build", sb.Name)
+	}
+
+	err = sb.gnuConfigure(buildDirectoryPath, buildDirectoryPath, flags...)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	return nil
+}
+
+// Run ./bootstrap && ./autogen && ./configure <flags>. This is usually used by GNU tools.
+func (sb *StandardBuilder) BootstrapAutogenConfigure(buildDirectoryPath string, flags ...string) error {
+	err := sb.Bootstrap(buildDirectoryPath)
+	if err != nil {
+		return trace.Wrap(err, "failed to bootstrap build directory %q", buildDirectoryPath)
+	}
+
+	err = sb.autogenNoCopy(buildDirectoryPath)
+	if err != nil {
+		return trace.Wrap(err, "failed to run autogen on copied sources")
+	}
+
+	err = sb.gnuConfigure(buildDirectoryPath, buildDirectoryPath, flags...)
+	if err != nil {
+		return trace.Wrap(err, "failed to run configure on copied sources")
+	}
+
+	return nil
+}
+
+func (sb *StandardBuilder) gnuConfigure(buildDirectoryPath, sourceDirectoryPath string, flags ...string) error {
 	_, err := runners.Run(&runners.Configure{
 		GenericRunner: sb.getGenericRunner(buildDirectoryPath),
 		Options: []*runners.ConfigureOptions{
@@ -143,12 +186,12 @@ func (sb *StandardBuilder) GNUConfigure(buildDirectoryPath string, flags ...stri
 			{
 				AdditionalArgs: map[string]args.IValue{
 					"--prefix": args.StringValue("/"), // Path is relative to DESTDIR, set when invoking make
-					"--srcdir": args.StringValue(sb.SourceDirectoryPath),
+					"--srcdir": args.StringValue(sourceDirectoryPath),
 				},
 				AdditionalFlags: pie.Map(flags, func(flag string) args.IValue { return args.StringValue(flag) }),
 			},
 		},
-		ConfigurePath: path.Join(sb.SourceDirectoryPath, "configure"),
+		ConfigurePath: path.Join(sourceDirectoryPath, "configure"),
 		HostTriplet:   sb.ToolchainRequiredBuilder.Triplet,
 		TargetTriplet: sb.ToolchainRequiredBuilder.Triplet,
 	})
@@ -281,6 +324,32 @@ func (sb *StandardBuilder) MakeBuild(makefileDirectoryPath string, makeOptions [
 	return nil
 }
 
+func (sb *StandardBuilder) Bootstrap(buildDirectoryPath string) error {
+	err := sb.CopyToBuildDirectory(buildDirectoryPath)
+	if err != nil {
+		return trace.Wrap(err, "failed to copy source directory %q to build directory %q", sb.SourceDirectoryPath, buildDirectoryPath)
+	}
+
+	err = sb.bootstrapNoCopy(buildDirectoryPath)
+	if err != nil {
+		return trace.Wrap(err, "failed to run bootstrap on copied sources")
+	}
+
+	return nil
+}
+
+func (sb *StandardBuilder) bootstrapNoCopy(buildDirectoryPath string) error {
+	_, err := runners.Run(&runners.CommandRunner{
+		GenericRunner: sb.getGenericRunner(buildDirectoryPath),
+		Command:       path.Join(buildDirectoryPath, "bootstrap"),
+	})
+	if err != nil {
+		return trace.Wrap(err, "command bootstrap failed in build directory %q", buildDirectoryPath)
+	}
+
+	return nil
+}
+
 func (sb *StandardBuilder) Autogen(buildDirectoryPath string) error {
 	// Autogen is somewhat strange and does not support generating files in
 	// a separate build directory. To prevent contaminating the source folder,
@@ -292,7 +361,16 @@ func (sb *StandardBuilder) Autogen(buildDirectoryPath string) error {
 		return trace.Wrap(err, "failed to copy source directory %q to build directory %q", sb.SourceDirectoryPath, buildDirectoryPath)
 	}
 
-	_, err = runners.Run(&runners.CommandRunner{
+	err = sb.autogenNoCopy(buildDirectoryPath)
+	if err != nil {
+		return trace.Wrap(err, "failed to run autogen on copied sources")
+	}
+
+	return nil
+}
+
+func (sb *StandardBuilder) autogenNoCopy(buildDirectoryPath string) error {
+	_, err := runners.Run(&runners.CommandRunner{
 		GenericRunner: sb.getGenericRunner(buildDirectoryPath),
 		Command:       path.Join(buildDirectoryPath, "autogen.sh"),
 	})

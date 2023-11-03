@@ -578,6 +578,55 @@
         "-D",
         "/tmp/root-filesystem"
       ]
+    },
+    {
+      "name": "Launch build dejavu-fonts",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "build",
+        "dejavu-fonts",
+        "--output-directory-path",
+        "/tmp/output/dejavu-fonts",
+        "--toolchain-directory-path",
+        "/tmp/output/cross-llvm",
+        "--root-fs-directory-path",
+        "/tmp/root-filesystem"
+      ]
+    },
+    {
+      "name": "Launch package dejavu-fonts",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "package",
+        "tarball",
+        "-c",
+        "--build-output-path",
+        "/tmp/output/dejavu-fonts",
+        "--output-file-path",
+        "/tmp/package/dejavu-fonts.tar.gz"
+      ]
+    },
+    {
+      "name": "Launch install dejavu-fonts",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "install",
+        "tarball",
+        "-c",
+        "-s",
+        "/tmp/package/dejavu-fonts.tar.gz",
+        "-D",
+        "/tmp/root-filesystem"
+      ]
     }
   ]
 }

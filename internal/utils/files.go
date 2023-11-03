@@ -2,10 +2,37 @@ package utils
 
 import (
 	"bufio"
+	"io"
+	"net/http"
 	"os"
 
 	"github.com/gravitational/trace"
 )
+
+func DownloadFile(url, destinationFilePath string) error {
+	fileHandle, err := os.Create(destinationFilePath)
+	defer Close(fileHandle, &err)
+	if err != nil {
+		return trace.Wrap(err, "failed to open download file path %q for writing", fileHandle)
+	}
+
+	httpResponse, err := http.Get(url)
+	defer Close(httpResponse.Body, &err)
+	if err != nil {
+		return trace.Wrap(err, "failed to get HTTP response for download URL %q", url)
+	}
+
+	writtenByteCount, err := io.Copy(fileHandle, httpResponse.Body)
+	if err != nil {
+		return trace.Wrap(err, "failed to write HTTP response body to download file path %q", destinationFilePath)
+	}
+
+	if httpResponse.ContentLength != -1 && writtenByteCount != httpResponse.ContentLength {
+		return trace.Errorf("Only wrote %d bytes to %q, but %d bytes were reported in the content length", writtenByteCount, destinationFilePath, httpResponse.ContentLength)
+	}
+
+	return nil
+}
 
 func ReadLines(filePath string) ([]string, error) {
 	lineChannel, errChannel := StreamLines(filePath)
