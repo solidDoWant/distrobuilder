@@ -142,6 +142,9 @@ func (lk *LinuxKernel) copySource(makeOptions []*runners.MakeOptions) error {
 			PreserveTimes:     true,
 			OnSymlink:         func(src string) copy.SymlinkAction { return copy.Shallow },
 			PermissionControl: copy.PerservePermission,
+			Skip: func(srcInfo os.FileInfo, src, dest string) (bool, error) {
+				return strings.HasPrefix(srcInfo.Name(), ".git"), nil
+			},
 		},
 	)
 	if err != nil {
