@@ -71,8 +71,7 @@ func prettyPrintTask(task *execute.ExecTask) string {
 			continue
 		}
 
-		output += " "
-		output += arg
+		output += fmt.Sprintf(" %q", arg)
 	}
 
 	return output
