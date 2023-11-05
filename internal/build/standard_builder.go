@@ -104,6 +104,7 @@ func (sb *StandardBuilder) getGenericRunner(workingDirectory string) runners.Gen
 		Options: []*runners.GenericRunnerOptions{
 			sb.ToolchainRequiredBuilder.GetGenericRunnerOptions(),
 			sb.RootFSBuilder.GetGenericRunnerOptions(),
+			sb.FilesystemOutputBuilder.GetGenericRunnerOptions(),
 		},
 	}
 }
@@ -279,6 +280,29 @@ func updatePkgconfigPrefix(pkgconfigFilePath string) error {
 	err = os.WriteFile(pkgconfigFilePath, fileContents, 0644)
 	if err != nil {
 		return trace.Wrap(err, "failed to write pkg-config file at %q", pkgconfigFilePath)
+	}
+
+	return nil
+}
+
+func (sb *StandardBuilder) MesonSetup(buildDirectoryPath string, options ...*runners.MesonOptions) error {
+	_, err := runners.Run(&runners.Meson{
+		GenericRunner:       sb.getGenericRunner(buildDirectoryPath), // This does not nescessarily need to be set to the build directory
+		Backend:             "Ninja",
+		SourceDirectoryPath: sb.SourceDirectoryPath,
+		BuildDirectoryPath:  buildDirectoryPath,
+		Options: append(
+			[]*runners.MesonOptions{
+				sb.FilesystemOutputBuilder.GetMesonOptions(),
+				sb.ToolchainRequiredBuilder.GetMesonOptions(),
+				sb.RootFSBuilder.GetMesonOptions(),
+			},
+			options...,
+		),
+	})
+
+	if err != nil {
+		return trace.Wrap(err, "failed to create perform setup with meson for %s", sb.Name)
 	}
 
 	return nil

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -28,4 +29,17 @@ func SearchPath(name string) (string, error) {
 	}
 
 	return "", trace.Wrap(err, "failed to look up %q in the PATH search path", name)
+}
+
+func DoesFilesystemPathExist(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+
+	return false, trace.Wrap(err, "failed to stat filepath %q", path)
 }

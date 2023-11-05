@@ -11,7 +11,7 @@ go install -v github.com/go-delve/delve/cmd/dlv@latest
 go install -v github.com/josharian/impl@latest
 
 # Install development specific packages and tools
-apt install -y zsh curl sudo ccache
+apt install --no-install-recommends -y zsh curl sudo ccache
 
 # Create the vscode user and group
 groupadd -g 1000 vscode

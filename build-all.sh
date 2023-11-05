@@ -64,3 +64,5 @@ chroot "$ROOTFS_PATH" echo "chroot test"
 
 # GRUB/bootloader packages
 standard_builder freetype
+standard_builder dejavu-fonts
+standard_builder libfuse

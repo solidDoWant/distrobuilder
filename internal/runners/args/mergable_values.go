@@ -123,3 +123,42 @@ func MergeMap[T comparable](argMaps ...map[T]IValue) (map[T]IValue, error) {
 
 	return mergedMap, nil
 }
+
+func MergeNestedMap[TKey1 comparable, TKey2 comparable](maps ...map[TKey1]map[TKey2]IValue) (map[TKey1]map[TKey2]IValue, error) {
+	var err error
+	reduceFunc := func(m1 map[TKey1]map[TKey2]IValue, m2 map[TKey1]map[TKey2]IValue) map[TKey1]map[TKey2]IValue {
+		if err != nil {
+			// Skip doing anything and return as quickly as possible if an error already occured
+			return nil
+		}
+
+		if m1 == nil {
+			return m2
+		}
+
+		for m2Key, m2Value := range m2 {
+			m1Value, ok := m1[m2Key]
+			if !ok || m1Value == nil {
+				m1[m2Key] = m2Value
+				continue
+			}
+
+			mergedValue, err := MergeMap(m1Value, m2Value)
+			if err != nil {
+				err = trace.Wrap(err, "failed to merge maps for key %#v", m2Key)
+				return nil
+			}
+
+			m1[m2Key] = mergedValue
+		}
+
+		return m1
+	}
+
+	mergedNestedMap := pie.Reduce(maps, reduceFunc)
+	if err != nil {
+		return nil, trace.Wrap(err, "failed to merge meson nested map")
+	}
+
+	return mergedNestedMap, nil
+}

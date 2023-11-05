@@ -1,5 +1,7 @@
 package args
 
+import "strconv"
+
 type IValue interface {
 	GetValue() string
 }
@@ -10,12 +12,12 @@ func (sv StringValue) GetValue() string {
 	return string(sv)
 }
 
-type BoolValue struct {
+type CMakeBoolValue struct {
 	IsOn     bool
 	IsForced bool // Some vars (but not all can take a "forced" value)
 }
 
-func (bv BoolValue) GetValue() string {
+func (bv CMakeBoolValue) GetValue() string {
 	if !bv.IsOn {
 		return "OFF"
 	}
@@ -27,9 +29,9 @@ func (bv BoolValue) GetValue() string {
 	return "ON"
 }
 
-func OffValue() BoolValue      { return BoolValue{} }
-func OnValue() BoolValue       { return BoolValue{IsOn: true} }
-func ForcedOnValue() BoolValue { return BoolValue{IsOn: true, IsForced: true} }
+func OffValue() CMakeBoolValue      { return CMakeBoolValue{} }
+func OnValue() CMakeBoolValue       { return CMakeBoolValue{IsOn: true} }
+func ForcedOnValue() CMakeBoolValue { return CMakeBoolValue{IsOn: true, IsForced: true} }
 
 type emptyValue struct{}
 
@@ -38,3 +40,12 @@ func (*emptyValue) GetValue() string {
 }
 
 var EmptyValue = &emptyValue{}
+
+type BoolValue bool
+
+func (bv BoolValue) GetValue() string {
+	return strconv.FormatBool(bool(bv))
+}
+
+func FalseValue() BoolValue { return BoolValue(false) }
+func TrueValue() BoolValue  { return BoolValue(true) }

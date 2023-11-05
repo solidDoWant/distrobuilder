@@ -6,6 +6,7 @@ import (
 
 	execute "github.com/alexellis/go-execute/pkg/v1"
 	"github.com/gravitational/trace"
+	"github.com/solidDoWant/distrobuilder/internal/utils"
 )
 
 type CommandError struct {
@@ -17,11 +18,40 @@ func IsCommandError(err error) bool {
 	return ok
 }
 
-type Runner interface {
+type IRunner interface {
 	BuildTask() (*execute.ExecTask, error)
 }
 
-func Run(runner Runner) (*execute.ExecResult, error) {
+type ISetupRunner interface {
+	IRunner
+	Setup() error
+}
+
+type ICleanupRunner interface {
+	IRunner
+	Cleanup() error
+}
+
+func Run(runner IRunner) (*execute.ExecResult, error) {
+	var err error
+	if cleanupRunner, ok := runner.(ICleanupRunner); ok {
+		defer utils.ErrDefer(func() error {
+			err := cleanupRunner.Cleanup()
+			if err != nil {
+				return trace.Wrap(err, "runner cleanup failed")
+			}
+
+			return nil
+		}, &err)
+	}
+
+	if setupRunner, ok := runner.(ISetupRunner); ok {
+		err := setupRunner.Setup()
+		if err != nil {
+			return nil, trace.Wrap(err, "runner setup failed")
+		}
+	}
+
 	task, err := runner.BuildTask()
 	if err != nil || task == nil {
 		return nil, trace.Wrap(err, "failed to build task")

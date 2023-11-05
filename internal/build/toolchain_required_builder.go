@@ -78,6 +78,49 @@ func (trb *ToolchainRequiredBuilder) GetConfigurenOptions() *runners.ConfigureOp
 	}
 }
 
+func (trb *ToolchainRequiredBuilder) GetMesonOptions() *runners.MesonOptions {
+	compilerFlags := args.SeparatorValues(" ", fmt.Sprintf("-gz=%s", compressionLibrary), "-v")
+	linkerPath := args.StringValue(trb.GetPathForTool("ld.lld"))
+
+	return &runners.MesonOptions{
+		CrossFile: map[string]map[string]args.IValue{
+			"properties": {
+				"needs_exe_wrapper": args.TrueValue(),
+			},
+			"binaries": {
+				"c":          args.StringValue(trb.GetPathForTool("clang")),
+				"c_args":     compilerFlags,
+				"c_ld":       linkerPath,
+				"cpp":        args.StringValue(trb.GetPathForTool("clang++")),
+				"cpp_args":   compilerFlags,
+				"cpp_ld":     linkerPath,
+				"strip":      args.StringValue(trb.GetPathForTool("strip")),
+				"pkg-config": args.StringValue("pkg-config"), // Use the normal pkg-config binary
+			},
+			"host_machine": {
+				"system":     args.StringValue("linux"),
+				"kernel":     args.StringValue("linux"),
+				"cpu":        args.StringValue(trb.Triplet.Machine),
+				"cpu_family": args.StringValue(trb.Triplet.Machine),
+				"endian":     args.StringValue("little"), // TODO don't hardcode this. Not sure how to pull it from clang.
+			},
+		},
+		NativeFile: map[string]map[string]args.IValue{
+			"properties": {
+				"needs_exe_wrapper": args.FalseValue(),
+			},
+			"binaries": {
+				"c":          args.StringValue("clang"),
+				"cpp":        args.StringValue("clang++"),
+				"pkg-config": args.StringValue("pkg-config"),
+			},
+		},
+		Options: map[string]args.IValue{
+			"strip": args.TrueValue(),
+		},
+	}
+}
+
 func (trb *ToolchainRequiredBuilder) GetGenericRunnerOptions() *runners.GenericRunnerOptions {
 	return &runners.GenericRunnerOptions{
 		EnvironmentVariables: map[string]args.IValue{

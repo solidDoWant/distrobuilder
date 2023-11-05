@@ -24,29 +24,29 @@ func (cc CommandChecker) BuildTask() (*execute.ExecTask, error) {
 	return task, nil
 }
 
-func (cc CommandChecker) DoesCommandExist() (bool, string, error) {
+func (cc CommandChecker) GetCommandPath() (string, error) {
 	cmdResult, err := Run(cc)
 	if err != nil {
-		return false, "", trace.Wrap(err, "failed to run version checker command")
+		return "", trace.Wrap(err, "failed to run version checker command")
 	}
 
 	if cmdResult.ExitCode == 0 {
-		return true, cmdResult.Stdout, nil
+		return cmdResult.Stdout, nil
 	}
 
-	return false, "", nil
+	return "", nil
 }
 
 func CheckRequiredCommandsExist(requiredCommands []string) error {
 	for _, requiredCommand := range requiredCommands {
-		doesExist, _, err := CommandChecker{
+		commandPath, err := CommandChecker{
 			Command: requiredCommand,
-		}.DoesCommandExist()
+		}.GetCommandPath()
 		if err != nil {
 			return trace.Wrap(err, "failed to check if command %q exists", requiredCommand)
 		}
 
-		if !doesExist {
+		if commandPath == "" {
 			return trace.Errorf("required command %q does not exist", requiredCommand)
 		}
 	}

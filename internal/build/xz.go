@@ -152,6 +152,8 @@ func (xz *XZ) getMakeOptions() []*runners.MakeOptions {
 	return []*runners.MakeOptions{
 		{
 			Variables: map[string]args.IValue{
+				// This is set as an environment variable, but override it and specify the
+				// usr subdirectory
 				"DESTDIR": args.StringValue(path.Join(xz.OutputDirectoryPath, "usr")),
 			},
 		},

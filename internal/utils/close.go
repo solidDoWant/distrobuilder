@@ -10,21 +10,28 @@ type Closable interface {
 
 // Utility function to make `defer c.Close()` logic a little easier to read
 func Close(c Closable, callerErrRef *error) {
-	if c == nil {
+	ErrDefer(c.Close, callerErrRef)
+	if callerErrRef != nil {
+		*callerErrRef = trace.Wrap(*callerErrRef, "failed to close resource")
+	}
+}
+
+func ErrDefer(deferedFunction func() error, callerErrRef *error) {
+	if deferedFunction == nil {
 		return
 	}
 
 	// This doens't cover every case but covers the most common one
-	if IsNil(c) {
+	if IsNil(deferedFunction) {
 		return
 	}
 
-	closeErr := c.Close()
-	if closeErr == nil || callerErrRef != nil {
+	deferedError := deferedFunction()
+	if deferedError == nil || callerErrRef != nil {
 		return
 	}
 
-	*callerErrRef = trace.Wrap(closeErr, "failed to close resource")
+	*callerErrRef = trace.Wrap(deferedError, "defered function failed")
 }
 
 func CloseChannel(c Closable, errChannel chan<- error) {

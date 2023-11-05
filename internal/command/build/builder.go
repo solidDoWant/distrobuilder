@@ -46,6 +46,7 @@ func getCommands() []*cli.Command {
 		NewLinuxKernelCommand(),
 		NewFreeTypeCommand(),
 		NewDejaVuFontsCommand(),
+		NewLibFUSECommand(),
 	}
 
 	commands := make([]*cli.Command, 0, len(builders))
