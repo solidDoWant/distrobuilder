@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"path"
 	"strings"
@@ -18,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/utils"
+	"golang.org/x/sys/unix"
 )
 
 type Tarball struct {
@@ -117,12 +119,6 @@ func (t *Tarball) extractFilesFromArchive(tarReader *tar.Reader, destinationBase
 
 func (t *Tarball) extractFilesystemObject(header *tar.Header, tarReader *tar.Reader, destinationBasePath string) error {
 	switch header.Typeflag {
-	case tar.TypeDir:
-		err := t.extractDirectory(header, destinationBasePath)
-		if err != nil {
-			return trace.Wrap(err, "failed to extract directory %q", header.Name)
-		}
-
 	case tar.TypeReg:
 		err := t.extractFile(header, tarReader, destinationBasePath)
 		if err != nil {
@@ -134,25 +130,21 @@ func (t *Tarball) extractFilesystemObject(header *tar.Header, tarReader *tar.Rea
 		if err != nil {
 			return trace.Wrap(err, "failed to extract symlink %q", header.Name)
 		}
+
+	case tar.TypeChar:
+		err := t.extractCharacterFile(header, destinationBasePath)
+		if err != nil {
+			return trace.Wrap(err, "failed to extract character file %q", header.Name)
+		}
+
+	case tar.TypeDir:
+		err := t.extractDirectory(header, destinationBasePath)
+		if err != nil {
+			return trace.Wrap(err, "failed to extract directory %q", header.Name)
+		}
+
 	default:
 		return trace.Errorf("unsupported tar entry type %q", header.Typeflag)
-	}
-
-	return nil
-}
-
-func (t *Tarball) extractDirectory(header *tar.Header, destinationBasePath string) error {
-	outputFilePath := path.Join(destinationBasePath, header.Name)
-	fileMode := header.FileInfo().Mode()
-
-	err := os.MkdirAll(outputFilePath, fileMode)
-	if err != nil {
-		return trace.Wrap(err, "failed to create %q", outputFilePath)
-	}
-
-	err = t.updateOwnerAndPerms(header, outputFilePath)
-	if err != nil {
-		return trace.Wrap(err, "failed to update ownership and permissions of %q", outputFilePath)
 	}
 
 	return nil
@@ -164,6 +156,7 @@ func (t *Tarball) extractFile(header *tar.Header, tarReader *tar.Reader, destina
 	fileMode := fileInfo.Mode()
 
 	outputFileHandle, err := os.OpenFile(outputFilePath, os.O_CREATE|os.O_WRONLY, fileMode)
+	defer utils.Close(outputFileHandle, &err)
 	if err != nil {
 		return trace.Wrap(err, "failed to open %q for writing", outputFilePath)
 	}
@@ -208,6 +201,53 @@ func (t *Tarball) extractSymlink(header *tar.Header, destinationBasePath string)
 	err = os.Symlink(header.Linkname, outputFilePath)
 	if err != nil {
 		return trace.Wrap(err, "failed to create symlink %q to %q after removing pre-existing file at %q[1]", outputFilePath, header.Linkname)
+	}
+
+	return nil
+}
+
+func (t *Tarball) extractCharacterFile(header *tar.Header, destinationBasePath string) error {
+	outputFilePath := path.Join(destinationBasePath, header.Name)
+
+	doesExist, err := utils.DoesFilesystemPathExist(outputFilePath)
+	if err != nil {
+		return trace.Wrap(err, "failed to check if character file exists at %q", outputFilePath)
+	}
+
+	if doesExist {
+		err = os.Remove(outputFilePath)
+		if err != nil {
+			return trace.Wrap(err, "failed to remove character file at %q", outputFilePath)
+		}
+	}
+
+	// These reductions in var sizes are not great, but there's nothing I can do about them
+	devNumber := unix.Mkdev(uint32(header.Devmajor), uint32(header.Devminor))
+	err = syscall.Mknod(outputFilePath, uint32(syscall.S_IFCHR|header.FileInfo().Mode()&fs.ModePerm), int(devNumber))
+	if err != nil {
+		return trace.Wrap(err, "failed to create device node at %q for device number %d:%d", outputFilePath, header.Devmajor, header.Devminor)
+	}
+
+	err = t.updateOwnerAndPerms(header, outputFilePath)
+	if err != nil {
+		return trace.Wrap(err, "failed to update ownership and permissions of %q", outputFilePath)
+	}
+
+	return nil
+}
+
+func (t *Tarball) extractDirectory(header *tar.Header, destinationBasePath string) error {
+	outputFilePath := path.Join(destinationBasePath, header.Name)
+	fileMode := header.FileInfo().Mode()
+
+	err := os.MkdirAll(outputFilePath, fileMode)
+	if err != nil {
+		return trace.Wrap(err, "failed to create %q", outputFilePath)
+	}
+
+	err = t.updateOwnerAndPerms(header, outputFilePath)
+	if err != nil {
+		return trace.Wrap(err, "failed to update ownership and permissions of %q", outputFilePath)
 	}
 
 	return nil
