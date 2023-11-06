@@ -38,7 +38,7 @@ func (z *FreeType) DoConfiguration(buildDirectoryPath string) error {
 			"FT_REQUIRE_ZLIB":   args.OnValue(),
 			// TODO
 			// "FT_REQUIRE_PNG": args.OnValue(),
-			// "FT_REQUIRE_BZIP2": args.OnValue(),
+			"FT_REQUIRE_BZIP2": args.OnValue(),
 			// "FT_REQUIRE_BROTLI": args.OnValue(),
 			// "FT_REQUIRE_HARFBUZZ": args.OnValue(),
 		},

@@ -49,7 +49,7 @@ func (pcre2 *PCRE2) DoConfiguration(buildDirectoryPath string) error {
 		"--enable-newline-is-any", // TODO not sure that this should be set
 		"--enable-unicode",
 		"--enable-pcre2grep-libz",
-		// "--enable-pcre2grep-libbz2",	// TODO enable this once bz2 lib has been added
+		"--enable-pcre2grep-libbz2",
 		// "--enable-pcre2test-libedit",	// TODO consider enabling this if libedit is added
 	)
 }
