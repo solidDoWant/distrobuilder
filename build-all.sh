@@ -66,3 +66,4 @@ chroot "$ROOTFS_PATH" echo "chroot test"
 standard_builder freetype
 standard_builder dejavu-fonts
 standard_builder libfuse
+standard_builder pcre2

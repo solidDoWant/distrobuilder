@@ -1,6 +1,7 @@
 package build
 
 import (
+	"os"
 	"path"
 
 	"github.com/gravitational/trace"
@@ -8,6 +9,7 @@ import (
 	"github.com/solidDoWant/distrobuilder/internal/runners/args"
 	"github.com/solidDoWant/distrobuilder/internal/source"
 	git_source "github.com/solidDoWant/distrobuilder/internal/source/git"
+	"github.com/solidDoWant/distrobuilder/internal/utils"
 )
 
 type PCRE2 struct {
@@ -58,6 +60,16 @@ func (pcre2 *PCRE2) DoBuild(buildDirectoryPath string) error {
 		return trace.Wrap(err, "failed to perform make install on %q", buildDirectoryPath)
 	}
 
+	err = pcre2.UpdatePkgconfigsPrefixes(pcre2.OutputDirectoryPath)
+	if err != nil {
+		return trace.Wrap(err, "failed to update package config files")
+	}
+
+	err = pcre2.updateConfigScript()
+	if err != nil {
+		return trace.Wrap(err, "failed to update config script with appropriate prefix value")
+	}
+
 	_, err = runners.Run(runners.CommandRunner{
 		Command: path.Join(buildDirectoryPath, "libtool"),
 		Arguments: []string{
@@ -67,6 +79,33 @@ func (pcre2 *PCRE2) DoBuild(buildDirectoryPath string) error {
 	})
 	if err != nil {
 		return trace.Wrap(err, "failed to run libtool --finish on output lib directory")
+	}
+
+	return nil
+}
+
+func (pcre2 *PCRE2) updateConfigScript() error {
+	scriptPath := path.Join(pcre2.OutputDirectoryPath, "usr", "bin", "pcre2-config")
+	lines, err := utils.ReadLines(scriptPath)
+	if err != nil {
+		return trace.Wrap(err, "failed to read the script file %q lines", scriptPath)
+	}
+
+	fileHandle, err := os.OpenFile(scriptPath, os.O_TRUNC|os.O_WRONLY, 0)
+	defer utils.Close(fileHandle, &err)
+	if err != nil {
+		return trace.Wrap(err, "failed to open script file %q for writing", scriptPath)
+	}
+
+	for _, line := range lines {
+		if line == "prefix=/" {
+			line = "prefix=/usr"
+		}
+
+		_, err = fileHandle.WriteString(line + "\n")
+		if err != nil {
+			return trace.Wrap(err, "failed to write line %q to script file %q", line, scriptPath)
+		}
 	}
 
 	return nil
