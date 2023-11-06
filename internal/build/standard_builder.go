@@ -265,6 +265,7 @@ func updatePkgconfigPrefix(pkgconfigFilePath string) error {
 			"exec_prefix": "${prefix}",
 			"libdir":      "${prefix}/lib",
 			"includedir":  "${prefix}/include",
+			"bindir":      "${prefix}/bin",
 		} {
 			prefix := fmt.Sprintf("%s=", key)
 			if strings.HasPrefix(line, prefix) {
