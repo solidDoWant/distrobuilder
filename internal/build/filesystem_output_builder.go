@@ -48,14 +48,6 @@ func (fob *FilesystemOutputBuilder) GetMesonOptions() *runners.MesonOptions {
 	}
 }
 
-func (fob *FilesystemOutputBuilder) GetGenericRunnerOptions() *runners.GenericRunnerOptions {
-	return &runners.GenericRunnerOptions{
-		EnvironmentVariables: map[string]args.IValue{
-			"DESTDIR": args.StringValue(fob.OutputDirectoryPath), // This is needed by some runners (such as make (usually) meson) and should be safe to set for all
-		},
-	}
-}
-
 func (fob *FilesystemOutputBuilder) getInstallPath(installSubdirectory string) string {
 	return path.Join(fob.OutputDirectoryPath, installSubdirectory)
 }

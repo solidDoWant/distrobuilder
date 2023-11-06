@@ -47,7 +47,7 @@ func (lfuse *LibFUSE) DoConfiguration(buildDirectoryPath string) error {
 }
 
 func (lfuse *LibFUSE) DoBuild(buildDirectoryPath string) error {
-	err := lfuse.NinjaBuild(buildDirectoryPath)
+	err := lfuse.MesonNinjaBuild(buildDirectoryPath)
 	if err != nil {
 		return trace.Wrap(err, "failed to build libfuse with Ninja")
 	}

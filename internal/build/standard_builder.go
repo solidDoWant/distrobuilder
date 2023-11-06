@@ -104,7 +104,6 @@ func (sb *StandardBuilder) getGenericRunner(workingDirectory string) runners.Gen
 		Options: []*runners.GenericRunnerOptions{
 			sb.ToolchainRequiredBuilder.GetGenericRunnerOptions(),
 			sb.RootFSBuilder.GetGenericRunnerOptions(),
-			sb.FilesystemOutputBuilder.GetGenericRunnerOptions(),
 		},
 	}
 }
@@ -287,7 +286,7 @@ func updatePkgconfigPrefix(pkgconfigFilePath string) error {
 
 func (sb *StandardBuilder) MesonSetup(buildDirectoryPath string, options ...*runners.MesonOptions) error {
 	_, err := runners.Run(&runners.Meson{
-		GenericRunner:       sb.getGenericRunner(buildDirectoryPath), // This does not nescessarily need to be set to the build directory
+		GenericRunner:       sb.getGenericRunner(buildDirectoryPath), // This does not nescessarily need to be set to the build directory,
 		Backend:             "Ninja",
 		SourceDirectoryPath: sb.SourceDirectoryPath,
 		BuildDirectoryPath:  buildDirectoryPath,
@@ -309,6 +308,22 @@ func (sb *StandardBuilder) MesonSetup(buildDirectoryPath string, options ...*run
 }
 
 func (sb *StandardBuilder) NinjaBuild(buildDirectoryPath string, buildTargets ...string) error {
+	return sb.genericNinjaBuild(sb.getGenericRunner(buildDirectoryPath), buildDirectoryPath, buildTargets...)
+}
+
+// This is a version of a Ninja build with extra meson-specific variables set
+func (sb *StandardBuilder) MesonNinjaBuild(buildDirectoryPath string, buildTargets ...string) error {
+	baseRunner := sb.getGenericRunner(buildDirectoryPath) // This does not nescessarily need to be set to the build directory
+	baseRunner.Options = append(baseRunner.Options, &runners.GenericRunnerOptions{
+		EnvironmentVariables: map[string]args.IValue{
+			"DESTDIR": args.StringValue(sb.OutputDirectoryPath), // This has to be set as an environment variable specifically
+		},
+	})
+
+	return sb.genericNinjaBuild(baseRunner, buildDirectoryPath, buildTargets...)
+}
+
+func (sb *StandardBuilder) genericNinjaBuild(baseRunner runners.GenericRunner, buildDirectoryPath string, buildTargets ...string) error {
 	if len(buildTargets) == 0 {
 		buildTargets = append(buildTargets, "install")
 	}
@@ -316,7 +331,7 @@ func (sb *StandardBuilder) NinjaBuild(buildDirectoryPath string, buildTargets ..
 	_, err := runners.Run(runners.CommandRunner{
 		Command:       "ninja",
 		Arguments:     buildTargets,
-		GenericRunner: sb.getGenericRunner(buildDirectoryPath),
+		GenericRunner: baseRunner,
 	})
 	if err != nil {
 		return trace.Wrap(err, "failed to build %s", sb.Name)
