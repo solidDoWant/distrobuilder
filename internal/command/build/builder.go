@@ -47,6 +47,7 @@ func getCommands() []*cli.Command {
 		NewFreeTypeCommand(),
 		NewDejaVuFontsCommand(),
 		NewLibFUSECommand(),
+		NewPCRE2Command(),
 	}
 
 	commands := make([]*cli.Command, 0, len(builders))
