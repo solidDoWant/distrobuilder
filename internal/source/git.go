@@ -210,15 +210,19 @@ func (gr *GitRepo) getRefspecForReference(remoteName string) (config.RefSpec, er
 		return config.RefSpec(fmt.Sprintf("+refs/tags/%s:refs/tags/%[1]s", reference.Short())), nil
 	}
 
-	if !reference.IsBranch() {
-		return "", trace.Errorf("unsupported ref %q", reference)
-
+	if reference.IsBranch() {
+		if reference == plumbing.HEAD {
+			return config.RefSpec(fmt.Sprintf("+HEAD:refs/remotes/%s/HEAD", remoteName)), nil
+		}
+		return config.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/remotes/%s/%[1]s", reference.Short(), remoteName)), nil
 	}
 
-	if reference == plumbing.HEAD {
-		return config.RefSpec(fmt.Sprintf("+HEAD:refs/remotes/%s/HEAD", remoteName)), nil
+	if plumbing.IsHash(reference.String()) {
+		refHash := reference.String()
+		return config.RefSpec(fmt.Sprintf("+%s:refs/remotes/%s/%[1]s", refHash, remoteName)), nil
 	}
-	return config.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/remotes/%s/%[1]s", reference.Short(), remoteName)), nil
+
+	return "", trace.Errorf("unsupported ref %q", reference)
 }
 
 func (gr *GitRepo) checkoutRef(repo *git.Repository, repoWorktree *git.Worktree) error {
@@ -249,26 +253,31 @@ func (gr *GitRepo) checkoutRef(repo *git.Repository, repoWorktree *git.Worktree)
 // a commit (such as annotated tags)
 func (gr *GitRepo) getCommitHash(repo *git.Repository) (plumbing.Hash, error) {
 	referenceName := plumbing.ReferenceName(gr.Ref)
-	if !referenceName.IsTag() {
-		reference, err := repo.Reference(referenceName, true)
+
+	if plumbing.IsHash(gr.Ref) {
+		return plumbing.NewHash(gr.Ref), nil
+	}
+
+	if referenceName.IsTag() {
+		tagReference, err := repo.Tag(referenceName.Short())
 		if err != nil {
-			return plumbing.ZeroHash, trace.Wrap(err, "failed to get commit reference for %q", referenceName)
+			return plumbing.ZeroHash, trace.Wrap(err, "failed to get tag reference for %q", referenceName)
 		}
 
-		return reference.Hash(), nil
+		commitHash, err := gr.getCommitHashForTagHash(tagReference.Hash(), repo)
+		if err != nil {
+			return plumbing.ZeroHash, trace.Wrap(err, "failed to get commit hash for tag %q", referenceName)
+		}
+
+		return commitHash, nil
 	}
 
-	tagReference, err := repo.Tag(referenceName.Short())
+	reference, err := repo.Reference(referenceName, true)
 	if err != nil {
-		return plumbing.ZeroHash, trace.Wrap(err, "failed to get tag reference for %q", referenceName)
+		return plumbing.ZeroHash, trace.Wrap(err, "failed to get commit reference for %q", referenceName)
 	}
 
-	commitHash, err := gr.getCommitHashForTagHash(tagReference.Hash(), repo)
-	if err != nil {
-		return plumbing.ZeroHash, trace.Wrap(err, "failed to get commit hash for tag %q", referenceName)
-	}
-
-	return commitHash, nil
+	return reference.Hash(), nil
 }
 
 func (gr *GitRepo) getCommitHashForTagHash(tagHash plumbing.Hash, repo *git.Repository) (plumbing.Hash, error) {
