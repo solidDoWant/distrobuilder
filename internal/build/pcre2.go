@@ -70,15 +70,9 @@ func (pcre2 *PCRE2) DoBuild(buildDirectoryPath string) error {
 		return trace.Wrap(err, "failed to update config script with appropriate prefix value")
 	}
 
-	_, err = runners.Run(runners.CommandRunner{
-		Command: path.Join(buildDirectoryPath, "libtool"),
-		Arguments: []string{
-			"--finish",
-			path.Join(pcre2.OutputDirectoryPath, "usr", "lib"),
-		},
-	})
+	err = pcre2.RunLibtool(buildDirectoryPath)
 	if err != nil {
-		return trace.Wrap(err, "failed to run libtool --finish on output lib directory")
+		return trace.Wrap(err, "failed to run libtool on the build output")
 	}
 
 	return nil

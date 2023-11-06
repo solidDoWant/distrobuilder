@@ -63,9 +63,10 @@ func (rfsb *RootFSBuilder) GetConfigurenOptions() *runners.ConfigureOptions {
 	sysrootFlag := fmt.Sprintf("--sysroot=%s", rfsb.RootFSDirectoryPath)
 	return &runners.ConfigureOptions{
 		AdditionalArgs: map[string]args.IValue{
-			"CFLAGS":   args.SeparatorValues(" ", sysrootFlag),
-			"CXXFLAGS": args.SeparatorValues(" ", sysrootFlag),
-			"LDFLAGS":  args.SeparatorValues(" ", sysrootFlag),
+			"--with-sysroot": args.StringValue(rfsb.RootFSDirectoryPath), // TODO consider if this actually works in all cases, or just autoconf cases
+			"CFLAGS":         args.SeparatorValues(" ", sysrootFlag),
+			"CXXFLAGS":       args.SeparatorValues(" ", sysrootFlag),
+			"LDFLAGS":        args.SeparatorValues(" ", sysrootFlag),
 		},
 	}
 }

@@ -136,7 +136,7 @@ func (sb *StandardBuilder) CMakeConfigureWithPath(buildDirectoryPath, cmakePath 
 }
 
 func (sb *StandardBuilder) GNUConfigure(buildDirectoryPath string, flags ...string) error {
-	err := sb.gnuConfigure(buildDirectoryPath, sb.SourceDirectoryPath)
+	err := sb.GNUConfigureWithSrc(buildDirectoryPath, sb.SourceDirectoryPath)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -150,7 +150,7 @@ func (sb *StandardBuilder) AutogenConfigure(buildDirectoryPath string, flags ...
 		return trace.Wrap(err, "failed to run autogen for %s build", sb.Name)
 	}
 
-	err = sb.gnuConfigure(buildDirectoryPath, buildDirectoryPath, flags...)
+	err = sb.GNUConfigureWithSrc(buildDirectoryPath, buildDirectoryPath, flags...)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -170,7 +170,7 @@ func (sb *StandardBuilder) BootstrapAutogenConfigure(buildDirectoryPath string, 
 		return trace.Wrap(err, "failed to run autogen on copied sources")
 	}
 
-	err = sb.gnuConfigure(buildDirectoryPath, buildDirectoryPath, flags...)
+	err = sb.GNUConfigureWithSrc(buildDirectoryPath, buildDirectoryPath, flags...)
 	if err != nil {
 		return trace.Wrap(err, "failed to run configure on copied sources")
 	}
@@ -178,7 +178,7 @@ func (sb *StandardBuilder) BootstrapAutogenConfigure(buildDirectoryPath string, 
 	return nil
 }
 
-func (sb *StandardBuilder) gnuConfigure(buildDirectoryPath, sourceDirectoryPath string, flags ...string) error {
+func (sb *StandardBuilder) GNUConfigureWithSrc(buildDirectoryPath, sourceDirectoryPath string, flags ...string) error {
 	_, err := runners.Run(&runners.Configure{
 		GenericRunner: sb.getGenericRunner(buildDirectoryPath),
 		Options: []*runners.ConfigureOptions{
@@ -363,9 +363,27 @@ func (sb *StandardBuilder) Bootstrap(buildDirectoryPath string) error {
 }
 
 func (sb *StandardBuilder) bootstrapNoCopy(buildDirectoryPath string) error {
+	var bootstrapScriptPath string
+	for _, possibleBootstrapFile := range []string{"bootstrap", "bootstrap.sh"} {
+		possibleBootstrapFilePath := path.Join(buildDirectoryPath, possibleBootstrapFile)
+		doesExists, err := utils.DoesFilesystemPathExist(possibleBootstrapFilePath)
+		if err != nil {
+			return trace.Wrap(err, "failed to check if bootstrap file %q exists", possibleBootstrapFilePath)
+		}
+
+		if doesExists {
+			bootstrapScriptPath = possibleBootstrapFilePath
+			break
+		}
+	}
+
+	if bootstrapScriptPath == "" {
+		return trace.Errorf("failed to find bootstrap file in %q", buildDirectoryPath)
+	}
+
 	_, err := runners.Run(&runners.CommandRunner{
 		GenericRunner: sb.getGenericRunner(buildDirectoryPath),
-		Command:       path.Join(buildDirectoryPath, "bootstrap"),
+		Command:       bootstrapScriptPath,
 	})
 	if err != nil {
 		return trace.Wrap(err, "command bootstrap failed in build directory %q", buildDirectoryPath)
@@ -400,6 +418,21 @@ func (sb *StandardBuilder) autogenNoCopy(buildDirectoryPath string) error {
 	})
 	if err != nil {
 		return trace.Wrap(err, "command autogen.sh failed in build directory %q", buildDirectoryPath)
+	}
+
+	return nil
+}
+
+func (sb *StandardBuilder) RunLibtool(buildDirectoryPath string) error {
+	_, err := runners.Run(runners.CommandRunner{
+		Command: path.Join(buildDirectoryPath, "libtool"),
+		Arguments: []string{
+			"--finish",
+			path.Join(sb.OutputDirectoryPath, "usr", "lib"),
+		},
+	})
+	if err != nil {
+		return trace.Wrap(err, "failed to run libtool --finish on output lib directory")
 	}
 
 	return nil
