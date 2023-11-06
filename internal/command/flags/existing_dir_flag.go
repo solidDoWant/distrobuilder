@@ -1,6 +1,8 @@
 package flags
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 
 	"github.com/gravitational/trace"
@@ -10,7 +12,7 @@ import (
 func ExistingDirValidator(cliCtx *cli.Context, path string) error {
 	pathInfo, err := os.Stat(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return trace.Wrap(err, "directory %q does not exist", path)
 		}
 

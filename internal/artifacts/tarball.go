@@ -54,7 +54,7 @@ func (t *Tarball) validateInstallOptions(options *InstallOptions) error {
 
 	sourceFileInfo, err := os.Lstat(options.SourcePath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return trace.Wrap(err, "source path %q does not exist", options.SourcePath)
 		}
 

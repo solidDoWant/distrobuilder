@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,7 +38,7 @@ func DoesFilesystemPathExist(path string) (bool, error) {
 		return true, nil
 	}
 
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return false, nil
 	}
 

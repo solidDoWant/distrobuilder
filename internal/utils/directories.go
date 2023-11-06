@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -60,7 +61,7 @@ func EnsureDirectoryExists(directoryPath string) (bool, error) {
 		}
 
 		directoryFilemode := os.FileMode(0770) // Read, write, and execute permissions for the current user and group
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			slog.Debug("Directory does not exist, creating it", "directory_path", directoryPath)
 			didDirectoryAlreadyExist = false
 

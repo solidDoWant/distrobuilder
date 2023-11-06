@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"io/fs"
 	"os"
 	"path"
@@ -26,7 +27,7 @@ func CreateSymlinks(links map[string]string, symlinkPrefixPath string) error {
 func CreateSymlink(symlinkPath, targetPath string) error {
 	// Check if the file exists already
 	newFileInfo, err := os.Stat(symlinkPath)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return trace.Wrap(err, "failed to retreive file info for new file %q", symlinkPath)
 	}
 
