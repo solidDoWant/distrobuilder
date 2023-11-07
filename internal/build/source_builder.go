@@ -1,9 +1,6 @@
 package build
 
 import (
-	"os"
-	"strings"
-
 	"github.com/gravitational/trace"
 	cp "github.com/otiai10/copy"
 )
@@ -33,12 +30,7 @@ func (sb *SourceBuilder) GetSourceDirectoryPath() string {
 
 // TODO rework this so that sb.SourceDirectoryPath is updated d uring the build process
 func (sb *SourceBuilder) CopyToBuildDirectory(buildDirectoryPath string) error {
-	err := cp.Copy(sb.SourceDirectoryPath, buildDirectoryPath, cp.Options{
-		// Skip copying ".git*" files, such as the ".git" directory and ".gitignore"
-		Skip: func(srcInfo os.FileInfo, src, dest string) (bool, error) {
-			return strings.HasPrefix(srcInfo.Name(), ".git"), nil
-		},
-	})
+	err := cp.Copy(sb.SourceDirectoryPath, buildDirectoryPath)
 	if err != nil {
 		return trace.Wrap(err, "failed to copy source directory %q contents to build directory %q", sb.SourceDirectoryPath, buildDirectoryPath)
 	}
