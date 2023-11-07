@@ -50,6 +50,7 @@ func getCommands() []*cli.Command {
 		NewPCRE2Command(),
 		NewMuslFTSCommand(),
 		NewBzip2Command(),
+		NewLibtoolCommand(),
 	}
 
 	commands := make([]*cli.Command, 0, len(builders))

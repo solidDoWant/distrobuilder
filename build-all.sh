@@ -69,3 +69,4 @@ standard_builder dejavu-fonts
 standard_builder libfuse
 standard_builder pcre2
 standard_builder musl-fts
+standard_builder libtool
