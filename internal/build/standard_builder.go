@@ -135,7 +135,7 @@ func (sb *StandardBuilder) CMakeConfigureWithPath(buildDirectoryPath, cmakePath 
 }
 
 func (sb *StandardBuilder) GNUConfigure(buildDirectoryPath string, flags ...string) error {
-	err := sb.GNUConfigureWithSrc(buildDirectoryPath, sb.SourceDirectoryPath)
+	err := sb.GNUConfigureWithSrc(buildDirectoryPath, sb.SourceDirectoryPath, flags...)
 	if err != nil {
 		return trace.Wrap(err)
 	}
