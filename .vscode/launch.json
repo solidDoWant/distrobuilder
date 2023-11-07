@@ -872,6 +872,55 @@
         "-D",
         "/tmp/root-filesystem"
       ]
+    },
+    {
+      "name": "Launch build gdbm",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "build",
+        "gdbm",
+        "--output-directory-path",
+        "/tmp/output/gdbm",
+        "--toolchain-directory-path",
+        "/tmp/output/cross-llvm",
+        "--root-fs-directory-path",
+        "/tmp/root-filesystem"
+      ]
+    },
+    {
+      "name": "Launch package gdbm",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "package",
+        "tarball",
+        "-c",
+        "--build-output-path",
+        "/tmp/output/gdbm",
+        "--output-file-path",
+        "/tmp/package/gdbm.tar.gz"
+      ]
+    },
+    {
+      "name": "Launch install gdbm",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/main.go",
+      "args": [
+        "install",
+        "tarball",
+        "-c",
+        "-s",
+        "/tmp/package/gdbm.tar.gz",
+        "-D",
+        "/tmp/root-filesystem"
+      ]
     }
   ]
 }
