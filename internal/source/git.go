@@ -12,6 +12,9 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/protocol/packp/capability"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport/client"
 	"github.com/gravitational/trace"
 	"github.com/solidDoWant/distrobuilder/internal/utils"
 )
@@ -180,6 +183,18 @@ func (gr *GitRepo) cloneInitializedRepo(repo *git.Repository, remoteName string)
 		return trace.Wrap(err, "failed to create refspec")
 	}
 
+	// Request all refspecs if an exact commit is requested, but the server does not support it
+	if refSpec.IsExactSHA1() {
+		isExactCommitSupported, err := gr.isExactSHA1Supported(repo, remoteName)
+		if err != nil {
+			return trace.Wrap(err, "failed to determine if exact commit is supported by server")
+		}
+
+		if !isExactCommitSupported {
+			refSpec = "+refs/heads/*:refs/remotes/origin/*"
+		}
+	}
+
 	// Fetch the ref from the remote
 	err = repo.Fetch(&git.FetchOptions{RemoteName: remoteName, Depth: 1, Tags: git.NoTags, RefSpecs: []config.RefSpec{refSpec}})
 	if err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
@@ -204,6 +219,39 @@ func (gr *GitRepo) cloneInitializedRepo(repo *git.Repository, remoteName string)
 	return nil
 }
 
+func (gr *GitRepo) isExactSHA1Supported(repo *git.Repository, remoteName string) (bool, error) {
+	remote, err := repo.Remote(remoteName)
+	if err != nil {
+		return false, trace.Wrap(err, "failed to find remote named %q", remoteName)
+	}
+
+	// Fetch endpoint URL
+	remoteFetchURL := remote.Config().URLs[0]
+	endpoint, err := transport.NewEndpoint(remoteFetchURL)
+	if err != nil {
+		return false, trace.Wrap(err, "failed to get endpoint for remote %q", remoteName)
+	}
+
+	client, err := client.NewClient(endpoint)
+	if err != nil {
+		return false, trace.Wrap(err, "failed to create client for endpoint URL %q", remoteFetchURL)
+	}
+
+	session, err := client.NewUploadPackSession(endpoint, nil)
+	defer utils.Close(session, &err)
+	if err != nil {
+		return false, trace.Wrap(err, "failed to create an upload pack session for %q", remoteFetchURL)
+	}
+
+	adversisedReferences, err := session.AdvertisedReferences()
+	if err != nil {
+		return false, trace.Wrap(err, "failed to get the advertised references for %q", remoteFetchURL)
+	}
+
+	return adversisedReferences.Capabilities.Supports(capability.AllowReachableSHA1InWant) &&
+		adversisedReferences.Capabilities.Supports(capability.AllowTipSHA1InWant), nil
+}
+
 func (gr *GitRepo) getRefspecForReference(remoteName string) (config.RefSpec, error) {
 	reference := plumbing.ReferenceName(gr.Ref)
 	if reference.IsTag() {
@@ -226,22 +274,22 @@ func (gr *GitRepo) getRefspecForReference(remoteName string) (config.RefSpec, er
 }
 
 func (gr *GitRepo) checkoutRef(repo *git.Repository, repoWorktree *git.Worktree) error {
-	reference := plumbing.ReferenceName(gr.Ref)
-	commitHash, err := gr.getCommitHash(repo)
-	if err != nil {
-		return trace.Wrap(err, "failed to get commit hash for reference")
-	}
-
 	checkoutOptions := &git.CheckoutOptions{
 		Force: true,
 	}
+
+	reference := plumbing.ReferenceName(gr.Ref)
 	if reference.IsBranch() {
 		checkoutOptions.Branch = reference
 	} else {
+		commitHash, err := gr.getCommitHash(repo)
+		if err != nil {
+			return trace.Wrap(err, "failed to get commit hash for reference")
+		}
 		checkoutOptions.Hash = commitHash
 	}
 
-	err = repoWorktree.Checkout(checkoutOptions)
+	err := repoWorktree.Checkout(checkoutOptions)
 	if err != nil {
 		return trace.Wrap(err, "failed to checkout ref %q for repo", reference)
 	}
