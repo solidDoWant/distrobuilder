@@ -52,6 +52,7 @@ func getCommands() []*cli.Command {
 		NewBzip2Command(),
 		NewLibtoolCommand(),
 		NewGDBMCommand(),
+		NewLibiconvCommand(),
 	}
 
 	commands := make([]*cli.Command, 0, len(builders))
